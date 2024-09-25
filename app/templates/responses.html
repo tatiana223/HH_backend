@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+    <main class="container">
+        <h4 class="text-center">Отклики</h4>
+
+        <div class="cards-wrapper d-flex flex-column">
+            {% for company in vacancy.companies %}
+                <div class="card mb-3 d-flex flex-row-reverse">
+                    <div class="card-img-container card-img-right">
+                        <img src="{{ company.image }}" alt="{{ company.name }}" class="card-img img-fluid" style="object-fit: cover; max-width: 400px;">
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ company.name }}</h5>
+                        <p class="card-text">{{ company.description|linebreaks }}</p>
+                        <p class="card-text"><small class="text-muted">{{ company.money }}</small></p>
+                        <span>Вы уже откликнулись</span>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </main>
+{% endblock content %}

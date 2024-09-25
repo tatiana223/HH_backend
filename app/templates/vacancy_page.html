@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+    <main class="container company-page">
+        <div class="vacancy-info">
+            <div class="vacancy-details">
+                <h1>{{ vacancy.name }}</h1>
+                <span>Описание: {{ vacancy.description|linebreaks }}</span>
+                <p>{{ vacancy.money }}</p>
+                
+            </div>
+            <img src="{{ vacancy.image }}" alt="{{ vacancy.name }}" class="company-image">
+        </div>
+    </main>
+{% endblock content %}
