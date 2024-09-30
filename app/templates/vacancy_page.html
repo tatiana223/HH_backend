@@ -1,3 +1,4 @@
+
 {% extends "base.html" %}
 {% load static %}
 
@@ -5,12 +6,12 @@
     <main class="container company-page">
         <div class="vacancy-info">
             <div class="vacancy-details">
-                <h1>{{ vacancy.name }}</h1>
+                <h1>{{ vacancy.name_vacancy }}</h1>
                 <span>Описание: {{ vacancy.description|linebreaks }}</span>
-                <p>{{ vacancy.money }}</p>
+                <p>от {{ vacancy.money_from }}₽ до {{ vacancy.money_to }}₽</p>
                 
             </div>
-            <img src="{{ vacancy.image }}" alt="{{ vacancy.name }}" class="company-image">
+            <img src="{{ vacancy.image }}" alt="{{ vacancy.name_vacancy }}" class="company-image">
         </div>
     </main>
 {% endblock content %}

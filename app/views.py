@@ -3,60 +3,67 @@ from django.shortcuts import render
 companies = [
     {
         "id": 1,
-        "name": "Водитель курьер",
+        "name_vacancy": "Водитель курьер",
         "description": "Требуемый опыт работы: не требуется\nЧастичная занятость, гибкий график\nВозможно временное оформление: договор услуг, подряда, ГПХ, самозанятые, ИПХ\nВозможна подработка: сменами по 4-6 часов",
         "image": "http://localhost:9000/images/1.png",
-        "money": "от 180 000 ₽ до 220 000 на руки",
+        "money_from": 180000,
+        "money_to": 220000,
         "city": "Москва",
         "name_company": "Купер",
         "peculiarities": "Нарушение слуха",
     },
     {
         "id": 2,
-        "name": "Оператор контакт-центра",
+        "name_vacancy": "Оператор контакт-центра",
         "description": "Требуемый опыт работы: 1-2 года\nПолная занятость, гибкий график\nОформление по ТК РФ\nВозможна удаленная работа",
         "image": "http://localhost:9000/images/2.png",
-        "money": "от 35 000 ₽ до 50 000 на руки",
+        "money_from": 35000,
+        "money_to": 50000,
         "city": "Москва",
         "name_company": "Контакт Плюс",
         "peculiarities": "Работа подходит для людей с ограниченными возможностями"
     },
     {
         "id": 3,
-        "name": "Консультант по продажам",
+        "name_vacancy": "Консультант по продажам",
         "description": "Требуемый опыт работы: не требуется\nПолная занятость, гибкий график\nОформление по ТК РФ\nВозможна удаленная работа",
         "image": "http://localhost:9000/images/3.png",
-        "money": "от 40 000 ₽ до 55 000 на руки",
+        "money_from": 40000,
+        "money_to": 55000,
         "city": "Санкт-Петербург",
         "name_company": "Консалтинг Экспресс",
         "peculiarities": "Работа подходит для людей с ограниченными возможностями"
     },
     {
         "id": 4,
-        "name": "Онлайн-переводчик",
+        "name_vacancy": "Онлайн-переводчик",
         "description": "Требуемый опыт работы: 1-3 года\nГибкий график, удаленная работа\nОформление по ГПХ",
         "image": "http://localhost:9000/images/4.png",
-        "money": "от 45 000 ₽ до 70 000 на руки",
+
+        "money_from": 45000,
+        "money_to": 70000,
         "city": "Москва",
         "name_company": "Бюро Переводов",
         "peculiarities": "Работа подходит для людей с нарушениями слуха"
     },
     {
         "id": 5,
-        "name": "Оператор call-центра",
+        "name_vacancy": "Оператор call-центра",
         "description": "Требуемый опыт работы: 1-2 года\nПолная занятость, гибкий график\nОформление по ТК РФ\nВозможна удаленная работа",
         "image": "http://localhost:9000/images/5.png",
-        "money": "от 35 000 ₽ до 50 000 на руки",
+        "money_from": 35000,
+        "money_to": 50000,
         "city": "Екатеринбург",
         "name_company": "Колл Центр",
         "peculiarities": "Работа подходит для людей с ограниченными возможностями"
     },
     {
         "id": 6,
-        "name": "Оператор ПК",
+        "name_vacancy": "Оператор ПК",
         "description": "Требуемый опыт работы: не требуется\nПолная занятость, гибкий график\nОформление по ТК РФ\nВозможна удаленная работа",
         "image": "http://localhost:9000/images/6.png",
-        "money": "от 30 000 ₽ до 45 000 на руки",
+        "money_from": 30000,
+        "money_to": 45000,
         "city": "Новосибирск",
         "name_company": "Офис Плюс",
         "peculiarities": "Работа подходит для людей с ограниченными возможностями"
@@ -69,43 +76,70 @@ draft_vacancy = {
     "companies": [
         {
             "id": 1,
-            "name": "Водитель курьер",
+            "name_vacancy": "Водитель курьер",
             "description": "Требуемый опыт работы: не требуется\nЧастичная занятость, гибкий график\nВозможно временное оформление: договор услуг, подряда, ГПХ, самозанятые, ИПХ\nВозможна подработка: сменами по 4-6 часов",
             "image": "http://localhost:9000/images/1.png",
-            "money": "от 180 000 ₽ до 220 000 на руки",
+            "money_from": 180000,
+            "money_to": 220000,
             "city": "Москва",
             "name_company": "Купер",
             "peculiarities": "Нарушение слуха",
         },
         {
             "id": 2,
-            "name": "Оператор контакт-центра",
+            "name_vacancy": "Оператор контакт-центра",
             "description": "Требуемый опыт работы: 1-2 года\nПолная занятость, гибкий график\nОформление по ТК РФ\nВозможна удаленная работа",
             "image": "http://localhost:9000/images/2.png",
-            "money": "от 35 000 ₽ до 50 000 на руки",
+            "money_from": 35000,
+            "money_to": 50000,
             "city": "Москва",
             "name_company": "Контакт Плюс",
             "peculiarities": "Работа подходит для людей с ограниченными возможностями"
         },
         {
             "id": 3,
-            "name": "Консультант по продажам",
+            "name_vacancy": "Консультант по продажам",
             "description": "Требуемый опыт работы: не требуется\nПолная занятость, гибкий график\nОформление по ТК РФ\nВозможна удаленная работа",
             "image": "http://localhost:9000/images/3.png",
-            "money": "от 40 000 ₽ до 55 000 на руки",
+            "money_from": 40000,
+            "money_to": 55000,
             "city": "Санкт-Петербург",
             "name_company": "Консалтинг Экспресс",
             "peculiarities": "Работа подходит для людей с ограниченными возможностями"
         },
         {
             "id": 4,
-            "name": "Онлайн-переводчик",
+            "name_vacancy": "Онлайн-переводчик",
             "description": "Требуемый опыт работы: 1-3 года\nГибкий график, удаленная работа\nОформление по ГПХ",
             "image": "http://localhost:9000/images/4.png",
-            "money": "от 45 000 ₽ до 70 000 на руки",
+
+            "money_from": 45000,
+            "money_to": 70000,
             "city": "Москва",
             "name_company": "Бюро Переводов",
             "peculiarities": "Работа подходит для людей с нарушениями слуха"
+        },
+        {
+            "id": 5,
+            "name_vacancy": "Оператор call-центра",
+            "description": "Требуемый опыт работы: 1-2 года\nПолная занятость, гибкий график\nОформление по ТК РФ\nВозможна удаленная работа",
+            "image": "http://localhost:9000/images/5.png",
+            "money_from": 35000,
+            "money_to": 50000,
+            "city": "Екатеринбург",
+            "name_company": "Колл Центр",
+            "peculiarities": "Работа подходит для людей с ограниченными возможностями"
+        },
+        {
+            "id": 6,
+            "name_vacancy": "Оператор ПК",
+            "description": "Требуемый опыт работы: не требуется\nПолная занятость, гибкий график\nОформление по ТК РФ\nВозможна удаленная работа",
+            "image": "http://localhost:9000/images/6.png",
+            "money_from": 30000,
+            "money_to": 45000,
+            "city": "Новосибирск",
+            "name_company": "Офис Плюс",
+            "peculiarities": "Работа подходит для людей с ограниченными возможностями"
         },
     ]
 }
@@ -121,7 +155,7 @@ def searchVacancies(company_name):
     res = []
 
     for company in companies:
-        if company_name.lower() in company["name"].lower():
+        if company_name.lower() in company["name_vacancy"].lower():
             res.append(company)
 
     return res
@@ -136,13 +170,13 @@ def getResponseById(vacancy_id):
 
 
 def index(request):
-    name = request.GET.get("name", "")
-    companies = searchVacancies(name)
+    name_vacancy = request.GET.get("name_vacancy", "")
+    companies = searchVacancies(name_vacancy)
     draft_vacancy = getDraftResponse()
 
     context = {
         "companies": companies,
-        "name": name,
+        "name_vacancy": name_vacancy,
         "companies_count": len(draft_vacancy["companies"]),
         "draft_vacancy": draft_vacancy
     }
