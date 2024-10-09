@@ -1,9 +1,8 @@
 {% extends "base.html" %}
-
 {% block content %}
     <main class="container">
         <div class="row d-flex justify-content-between">
-            <div class="col md-8">
+            <div class="col-md-8">
                 <form class="search-bar" action="/" method="GET">
                     <div class="row">
                         <div class="col-md-8">
@@ -13,25 +12,32 @@
                             <button type="submit" class="btn btn-primary w-100">Найти</button>
                         </div>
                     </div>
-
                 </form>
             </div>
-            <div class="col md-4 justify-end">
-                <a href="/vacancies/{{ draft_vacancy.id }}/" class="w-25">
-                    <button type="submit" class="bin btn btn-primary position-relative w-100">
+            <div class="col-md-4 d-flex justify-content-end"> <!-- Flex-контейнер для выравнивания по правой стороне -->
+                {% if draft_response %}
+                    <a href="/responses/{{ draft_response.id }}">
+                        <button type="submit" class="bin btn btn-primary position-relative response-btn">
+                            Отклик
+                            <div class="badge position-absolute badge rounded-pill">
+                                {{ vacancies_count }}
+                            </div>
+                        </button>
+                    </a>
+                {% else %}
+                    <button type="button" class="bin btn btn-primary position-relative response-btn disabled" disabled>
                         Отклик
                         <div class="badge position-absolute badge rounded-pill">
-                            {{ companies_count }}
+                            0
                         </div>
                     </button>
-                </a>
+                {% endif %}
             </div>
         </div>
         <div class="cards-wrapper">
-            {% for company in companies %}
+            {% for vacancy in vacancies %}
                 {% include "vacancy_card.html" %}
             {% endfor %}
         </div>
     </main>
 {% endblock content %}
-

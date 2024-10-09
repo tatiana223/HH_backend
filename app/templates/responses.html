@@ -6,18 +6,25 @@
         <h4 class="text-center">Отклики</h4>
 
         <div class="cards-wrapper d-flex flex-column">
-            {% for company in vacancy.companies %}
+            {% for vacancy in vacancies %}
                 <div class="card mb-3 d-flex flex-row-reverse">
                     <div class="card-img-container card-img-right">
-                        <img src="{{ company.image }}" alt="{{ company.name_vacancy }}" class="card-img img-fluid" style="object-fit: cover; max-width: 400px;">
+                        <img src="{{ vacancy.image }}" alt="{{ vacancy.name }}" class="card-img img-fluid" style="object-fit: cover; max-width: 400px;">
                     </div>
                     <div class="card-body">
-                        <h5 class="card-title">{{ company.name_vacancy}}</h5>
-                        <p class="card-text">{{ company.description|linebreaks }}</p>
-                        <p class="card-text"><small class="text-muted">от {{ company.money_from }}₽ до {{ company.money_to }}₽</small></p>
+                        <h5 class="card-title">{{ vacancy.name }}</h5>
+                        <p class="card-text">{{ vacancy.description|linebreaks }}</p>
+                        <p class="card-text"><small class="text-muted">от {{ vacancy.money_from }}₽ до {{ vacancy.money_to }}₽</small></p>
                     </div>
                 </div>
             {% endfor %}
         </div>
+    <form action="{% url 'delete_response' %}" method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="id" value="{{ request.id }}">
+        <button type="submit" class="btn btn-success center">Удалить заявку</button>
+    </form>
     </main>
 {% endblock content %}
+
+

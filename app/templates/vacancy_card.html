@@ -1,60 +1,23 @@
-{% load static %}
-
-{% if "http://localhost:8000/vacancies/" in request.build_absolute_uri %}
-
-    <div class="card w-100 mb5">
-         <div class="row g-0">
-            <div class="col-md-6 d-flex justify-center">
-            </div>
-            <div class="col-md-6">
-                <img src="{% static 'images/{{ company.image }}' %}" alt="{{ company.name }}" class="card-img img-fluid">
-            </div>
-             <div class="col-md-6">
-                <div class="card-body">
-                    <h5 class="card-title">{{ company.name }} </h5>
-                    <p class="card-text">от {{ company.money_from }}₽ до {{ company.money_to }}₽</p>
-                    
-                    <div class="form-group">
-                        <input disabled type="number" class="form-control" style="width: 250px" value={{ company.count }}>
-                    </div>
-                    <a href="/companies/{{ company.id }}/" class="btn btn-primary" style="width: 50px">
-                        Подробнее
-                    </a>
-                </div>
-            </div>
-         </div>
-    </div>
-
-{% else %}
-
-    <div class="card">
-
-        <div class="card-body" >
-
-            <div class="card-info">
-                
-                <img src="{{ company.image }}" alt="{{ company.name_vacancy }}">
-                <h5 class="card-title">{{ company.name_vacancy }}</h5>
-
-                <p class="card-text">от {{ company.money_from }}₽ до {{ company.money_to }}₽</p>
-                <p class="card-text">{{ company.city }}</p>
-                
-                <p class="card-text">{{ company.name_company }}</p>
-                 <p class="card-text">Особенности: {{ company.peculiarities }}</p>
-
-
-            </div>
-
-            <div class="card-btns">
-
-                <a href="/companies/{{ company.id }}/" class="btn btn-primary center">
-                    Подробнее
-                </a>
-
-            </div>
-
+<div class="card">
+    <div class="card-body">
+        <div class="card-info">
+            <img src="{{ vacancy.image }}" alt="{{ vacancy.name_vacancy }}">
+            <h5 class="card-title">{{ vacancy.name }}</h5>
+            <p class="card-text">от {{ vacancy.money_from }}₽ до {{ vacancy.money_to }}₽</p>
+            <p class="card-text">{{ vacancy.city }}</p>
+            <p class="card-text">{{ vacancy.name_company }}</p>
+            <p class="card-text">Особенности: {{ vacancy.peculiarities }}</p>
         </div>
-
+        <div class="card-btns d-flex flex-column w-100">
+            <!-- Кнопка Подробнее -->
+            <a href="/vacancies/{{ vacancy.id }}/" class="btn btn-primary w-100 mb-2">Подробнее</a>
+            
+            <!-- Форма с кнопкой Откликнуться -->
+            <form action="{% url 'add_vacancy' %}" method="POST" class="w-100">
+                {% csrf_token %}
+                <input type="hidden" name="id" value="{{ vacancy.id }}">
+                <button type="submit" class="btn btn-success w-100">Откликнуться</button>
+            </form>
+        </div>
     </div>
-
-{% endif %}
+</div>
