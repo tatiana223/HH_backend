@@ -12,12 +12,13 @@
              <div class="col-md-6">
                 <div class="card-body">
                     <h5 class="card-title">{{ company.name }} </h5>
-                    <p class="card-text">{{ company.money }}</p>
+                    <p class="card-text">от {{ company.money_from }}₽ до {{ company.money_to }}₽</p>
+                    
                     <div class="form-group">
                         <input disabled type="number" class="form-control" style="width: 250px" value={{ company.count }}>
                     </div>
                     <a href="/companies/{{ company.id }}/" class="btn btn-primary" style="width: 50px">
-                        Откликнуться
+                        Подробнее
                     </a>
                 </div>
             </div>
@@ -32,10 +33,10 @@
 
             <div class="card-info">
                 
-                <img src="{{ company.image }}" alt="{{ company.name }}">
-                <h5 class="card-title">{{ company.name }}</h5>
+                <img src="{{ company.image }}" alt="{{ company.name_vacancy }}">
+                <h5 class="card-title">{{ company.name_vacancy }}</h5>
 
-                <p class="card-text">{{ company.money }}</p>
+                <p class="card-text">от {{ company.money_from }}₽ до {{ company.money_to }}₽</p>
                 <p class="card-text">{{ company.city }}</p>
                 
                 <p class="card-text">{{ company.name_company }}</p>
@@ -47,7 +48,7 @@
             <div class="card-btns">
 
                 <a href="/companies/{{ company.id }}/" class="btn btn-primary center">
-                    Откликнуться
+                    Подробнее
                 </a>
 
             </div>

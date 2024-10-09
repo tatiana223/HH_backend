@@ -9,13 +9,12 @@
             {% for company in vacancy.companies %}
                 <div class="card mb-3 d-flex flex-row-reverse">
                     <div class="card-img-container card-img-right">
-                        <img src="{{ company.image }}" alt="{{ company.name }}" class="card-img img-fluid" style="object-fit: cover; max-width: 400px;">
+                        <img src="{{ company.image }}" alt="{{ company.name_vacancy }}" class="card-img img-fluid" style="object-fit: cover; max-width: 400px;">
                     </div>
                     <div class="card-body">
-                        <h5 class="card-title">{{ company.name }}</h5>
+                        <h5 class="card-title">{{ company.name_vacancy}}</h5>
                         <p class="card-text">{{ company.description|linebreaks }}</p>
-                        <p class="card-text"><small class="text-muted">{{ company.money }}</small></p>
-                        <span>Вы уже откликнулись</span>
+                        <p class="card-text"><small class="text-muted">от {{ company.money_from }}₽ до {{ company.money_to }}₽</small></p>
                     </div>
                 </div>
             {% endfor %}
