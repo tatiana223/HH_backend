@@ -1,95 +1,105 @@
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.models import User
 from django.utils import timezone
-
-from django.http import HttpResponseRedirect
+from django.http import Http404, HttpResponseRedirect
 from django.urls import reverse
 
 from django.db import connection
-from app.models import Vacancies, Request, RequestServices
+from app.models import Vacancies, Responses, ResponsesVacancies
 
 def GetDraftResponse():
     current_user = GetCurrentUser()
-    return Request.objects.filter(creator=current_user.id, status=1).first()  # так как у пользователя только один черновик, то берем первый элемент, иначе None
+    if current_user is None:  # Проверка на наличие текущего пользователя
+        return None
+    return Responses.objects.filter(creator=current_user, status=1).first()
 
 def GetCurrentUser():
     return User.objects.filter(is_superuser=False).first()
 
-def GetAppVacanciesCount(id):
-    return RequestServices.objects.filter(request=id).count()
+def GetAppVacanciesCount(id_response):
+    return ResponsesVacancies.objects.filter(request=id_response).count()
+
 def index(request):
-    name_vacancy = request.GET.get("name_vacancy", "");
-    vacancies = Vacancies.objects.filter(name__istartswith=name_vacancy);
+    name_vacancy = request.GET.get("name_vacancy", "")
+    vacancies = Vacancies.objects.filter(name__istartswith=name_vacancy)
     context = {
         "vacancies": vacancies,
         "name_vacancy": name_vacancy
     }
     draft_response = GetDraftResponse()
     if draft_response:
-        context["vacancies_count"] = GetAppVacanciesCount(draft_response.id)
+        context["vacancies_count"] = GetAppVacanciesCount(draft_response.id_response)
         context["draft_response"] = draft_response
     else:
         context["draft_response"] = None
-        context["vacancies_count"] = 0  # Например, можно установить 0, если черновик отсутствует
+        context["vacancies_count"] = 0  # Устанавливаем 0, если черновик отсутствует
 
     return render(request, "home_page.html", context)
 
 def vacancy(request, vacancy_id):
-    vacancy = get_object_or_404(Vacancies, id=vacancy_id)
+    vacancy = get_object_or_404(Vacancies, id_vacancies=vacancy_id)
     context = {
         "vacancy": vacancy
     }
     return render(request, "vacancy_page.html", context)
 
 def response(request, id):
-    request_services = RequestServices.objects.filter(request=id)
-    vacancies_ids = request_services.values_list('vacancy', flat=True)
-    vacancies = Vacancies.objects.filter(id__in=vacancies_ids)
+    request_obj = Responses.objects.filter(id_response=id, status=1).first()
+
+    if not request_obj:
+        # Вместо raise Http404, рендерим страницу с сообщением
+        return render(request, 'no_response.html', {"message": "Отклик с таким ID не найден."})
+
+    request_services = ResponsesVacancies.objects.filter(request=id)
+    vacancies_ids = request_services.values_list('vacancy__id_vacancies', flat=True)
+    vacancies = Vacancies.objects.filter(id_vacancies__in=vacancies_ids)
 
     context = {
         "vacancies": vacancies,
-        "request": get_object_or_404(Request, id=id, status=1),
+        "request": request_obj,
     }
 
     return render(request, "responses.html", context)
 
+from django.core.exceptions import ObjectDoesNotExist
+
+
 def add_vacancy(request):
     if request.method == 'POST':
-        id = request.POST.get('id')
+        id_vacancies = request.POST.get('id_vacancies')
         draft_response = GetDraftResponse()
 
-        # если черновика нет, создаем новый
         if draft_response is None:
-            draft_response = Request.objects.create(
-                status = 1,
-                created_at = timezone.now(),
-                creator = GetCurrentUser(),
-                formed_at = timezone.now(),
+            draft_response = Responses.objects.create(
+                status=1,
+                created_at=timezone.now(),
+                creator=GetCurrentUser(),
+                formed_at=timezone.now(),
             )
 
-        # есть ли уже этот город в черновике
-        existing_entry = RequestServices.objects.filter(request=draft_response, vacancy=id).first()
+        existing_entry = ResponsesVacancies.objects.filter(request=draft_response, vacancy=id_vacancies).first()
 
         if not existing_entry:
-            # увеличиваем, если город уже есть в заявке
+            try:
+                vacancy = Vacancies.objects.get(id_vacancies=id_vacancies)
+                ResponsesVacancies.objects.create(
+                    request=draft_response,
+                    vacancy=vacancy,
+                )
+            except ObjectDoesNotExist:
+                print(f"Вакансия с ID {id_vacancies} не найдена.")
 
-            # если города нет в заявке, создаем новую запись
-            RequestServices.objects.create(
-                request=draft_response,
-                vacancy=Vacancies.objects.get(id=id),
-            )
         return HttpResponseRedirect(reverse('home_page'))
     return HttpResponseRedirect(reverse('home_page'))
 
+
 def delete_response(request):
     if request.method == 'POST':
-        request_id = request.POST.get('id')  # Переименовали переменную
+        id_response = request.POST.get('id_response')
 
-        # проверяем, существует ли заявка с таким ID
-        draft_request = Request.objects.filter(id=request_id).first()
+        draft_request = Responses.objects.filter(id_response=id_response).first()
         if draft_request:
-            # выполняем SQL-запрос для изменения статуса заявки на "Удалена"
-            with connection.cursor() as cursor:
-                cursor.execute("UPDATE requests SET status = 2 WHERE id = %s", [request_id])
+            draft_request.status = 2  # Меняем статус на "Удалена"
+            draft_request.save()  # Сохраняем изменения
 
         return HttpResponseRedirect(reverse('home_page'))

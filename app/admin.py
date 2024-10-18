@@ -1,9 +1,9 @@
 from django.contrib import admin
 from .models import Vacancies
-from .models import Request
-from .models import RequestServices
+from .models import Responses
+from .models import ResponsesVacancies
 
 admin.site.register(Vacancies)
-admin.site.register(RequestServices)
-admin.site.register(Request)
+admin.site.register(Responses)
+admin.site.register(ResponsesVacancies)
 

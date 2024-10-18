@@ -21,7 +21,7 @@
         </div>
     <form action="{% url 'delete_response' %}" method="POST">
         {% csrf_token %}
-        <input type="hidden" name="id" value="{{ request.id }}">
+        <input type="hidden" name="id_response" value="{{ request.id_response }}">
         <button type="submit" class="btn btn-success center">Удалить заявку</button>
     </form>
     </main>

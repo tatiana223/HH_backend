@@ -4,7 +4,7 @@ from datetime import datetime
 
 
 class Vacancies(models.Model):
-    id = models.IntegerField(primary_key=True)
+    id_vacancies = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255)
     description = models.TextField()
     money_from = models.IntegerField(default=0)
@@ -19,13 +19,13 @@ class Vacancies(models.Model):
         db_table = 'vacancies'
 
 
-class Request(models.Model):
+class Responses(models.Model):
     STATUS_CHOICES = (
         (1, 'Действующая'),
         (2, 'Удалена'),
     )
 
-    id = models.AutoField(primary_key=True)  # Автоинкрементное поле
+    id_response = models.AutoField(primary_key=True)  # Автоинкрементное поле
     status = models.IntegerField(choices=STATUS_CHOICES, default=1)
     created_at = models.DateTimeField(default=datetime.now)
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_requests')
@@ -35,12 +35,12 @@ class Request(models.Model):
 
     class Meta:
         managed = True
-        db_table = 'requests'
+        db_table = 'responses'
 
 
-class RequestServices(models.Model):
+class ResponsesVacancies(models.Model):
     mm_id = models.AutoField(primary_key=True)
-    request = models.ForeignKey(Request, on_delete=models.CASCADE)
+    request = models.ForeignKey(Responses, on_delete=models.CASCADE)
     vacancy = models.ForeignKey(Vacancies, on_delete=models.CASCADE)
     quantity = models.IntegerField(default=1)
     order = models.IntegerField(default=1)
@@ -48,6 +48,6 @@ class RequestServices(models.Model):
 
     class Meta:
         managed = True
-        db_table = 'request_services'
+        db_table = 'responses_vacancies'
         unique_together = ('request', 'vacancy')
 
