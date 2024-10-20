@@ -4,6 +4,13 @@
 {% block content %}
     <main class="container">
         <h4 class="text-center">Отклики</h4>
+    
+        <div class="response-details mb-4">
+            <h5>Пользователь: {{ response.creator.username }}</h5>
+            <p>Дата отлика: {{ response.created_at|date:"d.m.Y H:i" }}</p>
+            <p>Статус: {{ response.get_status_display }}</p>  
+        </div>
+
 
         <div class="cards-wrapper d-flex flex-column">
             {% for vacancy in vacancies %}
@@ -15,13 +22,14 @@
                         <h5 class="card-title">{{ vacancy.name }}</h5>
                         <p class="card-text">{{ vacancy.description|linebreaks }}</p>
                         <p class="card-text"><small class="text-muted">от {{ vacancy.money_from }}₽ до {{ vacancy.money_to }}₽</small></p>
+                        <p>Количество откликов: {{ vacancy.responsesvacancies_set.count }}</p>
                     </div>
                 </div>
             {% endfor %}
         </div>
     <form action="{% url 'delete_response' %}" method="POST">
         {% csrf_token %}
-        <input type="hidden" name="id_response" value="{{ request.id_response }}">
+        <input type="hidden" name="id_response" value="{{ response.id_response }}">
         <button type="submit" class="btn btn-success center">Удалить заявку</button>
     </form>
     </main>

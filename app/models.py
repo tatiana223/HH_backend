@@ -27,11 +27,12 @@ class Responses(models.Model):
 
     id_response = models.AutoField(primary_key=True)  # Автоинкрементное поле
     status = models.IntegerField(choices=STATUS_CHOICES, default=1)
-    created_at = models.DateTimeField(default=datetime.now)
-    creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_requests')
+    creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_responses')
+    created_at = models.DateTimeField(auto_now_add=True)
     formed_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     moderator = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='moderated_requests', null=True, blank=True)
+
 
     class Meta:
         managed = True

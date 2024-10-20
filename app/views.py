@@ -43,6 +43,9 @@ def vacancy(request, vacancy_id):
     }
     return render(request, "vacancy_page.html", context)
 
+from django.shortcuts import render, get_object_or_404, redirect
+from .models import Responses, ResponsesVacancies, Vacancies
+
 def response(request, id):
     request_obj = Responses.objects.filter(id_response=id, status=1).first()
 
@@ -50,18 +53,16 @@ def response(request, id):
         # Вместо raise Http404, рендерим страницу с сообщением
         return render(request, 'no_response.html', {"message": "Отклик с таким ID не найден."})
 
-    request_services = ResponsesVacancies.objects.filter(request=id)
+    request_services = ResponsesVacancies.objects.filter(request=request_obj)
     vacancies_ids = request_services.values_list('vacancy__id_vacancies', flat=True)
     vacancies = Vacancies.objects.filter(id_vacancies__in=vacancies_ids)
 
     context = {
         "vacancies": vacancies,
-        "request": request_obj,
+        "response": request_obj,  # Изменили на 'response'
     }
 
     return render(request, "responses.html", context)
-
-from django.core.exceptions import ObjectDoesNotExist
 
 
 def add_vacancy(request):
