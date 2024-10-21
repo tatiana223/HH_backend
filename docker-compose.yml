@@ -52,8 +52,7 @@ services:
 
   django:
     build: .
-    environment:
-      DATABASE_URL: postgres://postgres:1234@pgdb:5432/employment_db
+
     depends_on:
       - pgdb
       - minio
@@ -70,10 +69,6 @@ services:
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
       - "5050:80"
-    deploy:
-      resources:
-        limits:
-          memory: 512M  # Устанавливаем лимит на использование памяти
 
 
 volumes:

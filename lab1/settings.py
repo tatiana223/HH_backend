@@ -28,7 +28,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # DRF
-    #'rest_framework',
+    'rest_framework',
 
     # Наше приложение
     'app'
@@ -46,12 +46,12 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'lab1.urls'
 
-TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
+
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [TEMPLATE_DIR, ],
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -64,10 +64,10 @@ TEMPLATES = [
     },
 ]
 
-STATICFILES_FINDERS = [
+'''STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-]
+]'''
 
 WSGI_APPLICATION = 'lab1.wsgi.application'
 
@@ -123,10 +123,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = 'static/'
-STATIC_ROOT = os.path.join(BASE_DIR, "static")
-STATICFILES_DIRS = []
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+AWS_STORAGE_BUCKET_NAME = 'images'
+AWS_ACCESS_KEY_ID = 'minio'
+AWS_SECRET_ACCESS_KEY = 'minio123'
+AWS_S3_ENDPOINT_URL = 'minio:9000'
+MINIO_USE_SSL = False

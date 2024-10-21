@@ -4,6 +4,10 @@ from datetime import datetime
 
 
 class Vacancies(models.Model):
+    STATUS_CHOICES = [
+        (1, 'Действует'),
+        (2, 'Удалена')
+    ]
     id_vacancies = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255)
     description = models.TextField()
@@ -13,6 +17,7 @@ class Vacancies(models.Model):
     city = models.CharField(max_length=255, default='Неизвестно')
     name_company = models.CharField(max_length=255, default='Default company name')
     peculiarities = models.TextField(default='Default company name')
+    status = models.IntegerField(choices=STATUS_CHOICES, default=1, blank=False, null=False)
 
     class Meta:
         managed = True
@@ -20,10 +25,13 @@ class Vacancies(models.Model):
 
 
 class Responses(models.Model):
-    STATUS_CHOICES = (
-        (1, 'Действующая'),
+    STATUS_CHOICES = [
+        (1, 'Черновик'),
         (2, 'Удалена'),
-    )
+        (3, 'Сформирована'),
+        (4, 'Завершена'),
+        (5, 'Отклонена'),
+    ]
 
     id_response = models.AutoField(primary_key=True)  # Автоинкрементное поле
     status = models.IntegerField(choices=STATUS_CHOICES, default=1)
@@ -32,7 +40,7 @@ class Responses(models.Model):
     formed_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     moderator = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='moderated_requests', null=True, blank=True)
-
+    name_human = models.TextField(blank=True, null=True)
 
     class Meta:
         managed = True
