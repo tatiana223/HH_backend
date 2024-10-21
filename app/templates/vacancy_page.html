@@ -1,17 +1,17 @@
-
 {% extends "base.html" %}
 {% load static %}
-
 {% block content %}
-    <main class="container company-page">
-        <div class="vacancy-info">
-            <div class="vacancy-details">
-                <h1>{{ vacancy.name_vacancy }}</h1>
+    <main class="container vacancy-page">
+        <div class="response-info">
+            <div class="response-details">
+                <h1>{{ vacancy.name }}</h1>
                 <span>Описание: {{ vacancy.description|linebreaks }}</span>
                 <p>от {{ vacancy.money_from }}₽ до {{ vacancy.money_to }}₽</p>
-                
+                <p class="card-text">{{ vacancy.city }}</p>
+                <p class="card-text">{{ vacancy.name_company }}</p>
+                <p class="card-text">Особенности: {{ vacancy.peculiarities }}</p>
             </div>
-            <img src="{{ vacancy.image }}" alt="{{ vacancy.name_vacancy }}" class="company-image">
+            <img src="{{ vacancy.image }}" alt="{{ vacancy.name }}" class="vacancy-image">
         </div>
     </main>
 {% endblock content %}

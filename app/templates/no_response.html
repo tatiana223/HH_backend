@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block content %}
+    <div class="container">
+        <h2>{{ message }}</h2>
+        <p>Пожалуйста, проверьте правильность ссылки или вернитесь на <a href="{% url 'home_page' %}">главную страницу</a>.</p>
+    </div>
+{% endblock %}

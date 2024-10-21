@@ -1,37 +1,30 @@
-version: '3.7'
-
 services:
-  django:
-    build: .
-    container_name: django
-    command: bash -c "python manage.py fill_db && python manage.py runserver 0.0.0.0:8000"
-    volumes:
-      - ./:/usr/src/app
-    ports:
-      - "8000:8000"
+  pgdb:
+    image: postgres:17
     environment:
-      PYTHONUNBUFFERED: 1
-    depends_on:
-      - minio
+      POSTGRES_DB: employment_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+
 
   minio:
-    hostname: minio/minio:latest
     image: quay.io/minio/minio:RELEASE.2022-10-15T19-57-03Z
-    container_name: minio
-    command: server --console-address ":9001" /data/
     environment:
       MINIO_ACCESS_KEY: minio
       MINIO_SECRET_KEY: minio123
-    expose:
-      - "9000"
-      - "9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: server --console-address ":9001" /data/
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
       interval: 30s
       timeout: 20s
       retries: 3
-    volumes:
-      - minio-data:/data
 
   createbucket:
     image: minio/mc:latest
@@ -44,7 +37,7 @@ services:
       /usr/bin/mc mb s3/images;
       /usr/bin/mc anonymous set public s3/images;
       "
-      
+
   nginx:
     image: nginx:1.19.2-alpine
     container_name: nginx
@@ -52,10 +45,32 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "9002:9000"  # Измените этот порт
+      - "9003:9001"  # Измените и этот порт
     depends_on:
       - minio
 
+  django:
+    build: .
+
+    depends_on:
+      - pgdb
+      - minio
+    volumes:
+      - .:/usr/src/app
+    ports:
+      - "8000:8000"
+    command: python manage.py runserver 0.0.0.0:8000  # Добавьте эту строку, если ее нет
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+
+
 volumes:
+  pgdata:
   minio-data:
