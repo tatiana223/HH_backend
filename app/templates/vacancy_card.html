@@ -1,7 +1,7 @@
 <div class="card">
     <div class="card-body">
         <div class="card-info">
-            <img src="{{ vacancy.image }}" alt="{{ vacancy.name_vacancy }}">
+            <img src="{{ vacancy.url }}" alt="{{ vacancy.name_vacancy }}">
             <h5 class="card-title">{{ vacancy.name }}</h5>
             <p class="card-text">от {{ vacancy.money_from }}₽ до {{ vacancy.money_to }}₽</p>
             <p class="card-text">{{ vacancy.city }}</p>
@@ -10,12 +10,12 @@
         </div>
         <div class="card-btns d-flex flex-column w-100">
             <!-- Кнопка Подробнее -->
-            <a href="/vacancies/{{ vacancy.id_vacancies }}/" class="btn btn-primary w-100 mb-2">Подробнее</a>
+            <a href="/vacancies/{{ vacancy.id_vacancy }}/" class="btn btn-primary w-100 mb-2">Подробнее</a>
             
             <!-- Форма с кнопкой Откликнуться -->
             <form action="{% url 'add_vacancy' %}" method="POST" class="w-100">
                 {% csrf_token %}
-                <input type="hidden" name="id_vacancies" value="{{ vacancy.id_vacancies }}">
+                <input type="hidden" name="id_vacancy" value="{{ vacancy.id_vacancy }}">
                 <button type="submit" class="btn btn-success w-100">Откликнуться</button>
             </form>
         </div>

@@ -16,7 +16,7 @@
             {% for vacancy in vacancies %}
                 <div class="card mb-3 d-flex flex-row-reverse">
                     <div class="card-img-container card-img-right">
-                        <img src="{{ vacancy.image }}" alt="{{ vacancy.name }}" class="card-img img-fluid" style="object-fit: cover; max-width: 400px;">
+                        <img src="{{ vacancy.url }}" alt="{{ vacancy.name }}" class="card-img img-fluid" style="object-fit: cover; max-width: 400px;">
                     </div>
                     <div class="card-body">
                         <h5 class="card-title">{{ vacancy.name }}</h5>
