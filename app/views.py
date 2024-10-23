@@ -31,7 +31,8 @@ def VacanciesList(request):
     # Предполагается, что у вас есть функция для получения черновика заявки
     if GetDraftResponse():
         id_response = GetDraftResponse().id_response
-        count = ResponsesVacancies.objects.filter(request__id_response__id=id_response).count()
+        count = ResponsesVacancies.objects.filter(request=id_response).count()
+
     else:
         id_response = None
         count = 0
@@ -47,7 +48,7 @@ def VacanciesList(request):
 @api_view(["GET"])
 def GetVacancyById(request, vacancy_id):
     try:
-        vacancy = Vacancies.objects.get(id_vacancies=vacancy_id)
+        vacancy = Vacancies.objects.get(id_vacancy=vacancy_id)
     except Vacancies.DoesNotExist:
         return Response({"Ошибка": "Вакансия не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -58,7 +59,7 @@ def GetVacancyById(request, vacancy_id):
 @api_view(["POST"])
 def CreateVacancy(request):
     vacancy_data = request.data.copy()
-    vacancy_data.pop('image', None)  # Опционально, если вы хотите исключить поле 'image'
+    vacancy_data.pop('url', None)  # Опционально, если вы хотите исключить поле 'image'
 
     serializer = VacanciesSerializer(data=vacancy_data)
     serializer.is_valid(raise_exception=True)  # Проверка валидности с автоматической обработкой ошибок
@@ -69,12 +70,12 @@ def CreateVacancy(request):
 @api_view(["PUT"])
 def EditVacancy(request, vacancy_id):
     try:
-        vacancy = Vacancies.objects.get(id_vacancies=vacancy_id)
+        vacancy = Vacancies.objects.get(id_vacancy=vacancy_id)
     except Vacancies.DoesNotExist:
         return Response({"Ошибка": "Вакансия не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
     vacancy_data = request.data.copy()
-    vacancy_data.pop('image', None)  # Исключаем поле 'image', если оно не требуется для обновления
+    vacancy_data.pop('url', None)  # Исключаем поле 'image', если оно не требуется для обновления
 
     # Частичное обновление вакансии
     serializer = VacanciesSerializer(vacancy, data=vacancy_data, partial=True)
@@ -94,7 +95,7 @@ def EditVacancy(request, vacancy_id):
 @api_view(["DELETE"])
 def DeleteVacancy(request, vacancy_id):
     try:
-        vacancy = Vacancies.objects.get(id_vacancies=vacancy_id)
+        vacancy = Vacancies.objects.get(id_vacancy=vacancy_id)
     except Vacancies.DoesNotExist:
         return Response({"Ошибка": "Вакансия не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -110,21 +111,21 @@ def DeleteVacancy(request, vacancy_id):
 @api_view(["POST"])
 def AddVacancyToDraft(request, vacancy_id):
     try:
-        vacancy = Vacancies.objects.get(id_vacancies=vacancy_id)
+        vacancy = Vacancies.objects.get(id_vacancy=vacancy_id)
     except Vacancies.DoesNotExist:
         return Response({"error": "Вакансия не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
-    draft_response = GetDraftResponse()  # Предполагается, что у вас есть функция для получения черновика заявки
+    draft_response = GetDraftResponse()  # Получаем черновик заявки
 
     # Если черновика нет, создаем новый
     if draft_response is None:
         draft_response = Responses.objects.create(
             created_at=timezone.now(),  # Дата создания
-            creator=GetCurrentUser(),  # Создатель заявки (через пользовательскую функцию)
+            creator=GetCurrentUser(),  # Создатель заявки
             status=1,  # Статус "Действует"
         )
 
-    # Проверка, есть ли уже эта вакансия в черновике
+    # Проверка на существование вакансии в черновике
     existing_entry = ResponsesVacancies.objects.filter(request=draft_response, vacancy=vacancy).first()
 
     if existing_entry:
@@ -144,12 +145,12 @@ def AddVacancyToDraft(request, vacancy_id):
 
     # Сериализация и возврат обновлённого черновика
     serializer = ResponsesSerializer(draft_response)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response({"message": "Вакансия добавлена в черновик", "draft_response": serializer.data}, status=status.HTTP_200_OK)
 
 @api_view(["POST"])
 def UpdateVacancyImage(request, vacancy_id):
     try:
-        vacancy = Vacancies.objects.get(id_vacancies=vacancy_id)
+        vacancy = Vacancies.objects.get(id_vacancy=vacancy_id)
     except Vacancies.DoesNotExist:
         return Response({"error": "Вакансия не найдена"}, status=status.HTTP_404_NOT_FOUND)
 

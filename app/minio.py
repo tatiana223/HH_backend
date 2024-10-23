@@ -33,7 +33,7 @@ def add_pic(new_vacancy, pic: InMemoryUploadedFile) -> Response:
         return Response({"error": "Нет файла для изображения."}, status=status.HTTP_400_BAD_REQUEST)
 
     # Генерация уникального имени для изображения
-    img_obj_name = f"{new_vacancy.id_vacancies}.png"
+    img_obj_name = f"{new_vacancy.id_vacancy}.png"
 
     # Процесс загрузки файла
     result = process_file_upload(pic, client, img_obj_name)

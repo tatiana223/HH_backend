@@ -7,7 +7,7 @@ from .models import Vacancies, Responses, ResponsesVacancies
 class VacanciesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vacancies
-        fields = ['id_vacancies', 'name', 'description', 'money_from', 'money_to', 'image', 'city', 'name_company', 'peculiarities']
+        fields = ['id_vacancy', 'name', 'description', 'money_from', 'money_to', 'image', 'city', 'name_company', 'peculiarities']
         extra_kwargs = {
             'name': {'required': False},
             'description': {'required': False}
@@ -28,7 +28,7 @@ class ResponsesVacanciesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ResponsesVacancies
-        fields = ['mm_id', 'request', 'vacancy', 'quantity', 'order', 'is_main', 'count_responses']
+        fields = ['mm_id', 'request', 'vacancy', 'quantity', 'order', 'count_responses']
 
     def get_count_responses(self, obj):
         # Подсчитываем количество откликов для вакансии

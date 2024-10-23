@@ -8,7 +8,7 @@ class Vacancies(models.Model):
         (1, 'Действует'),
         (2, 'Удалена')
     ]
-    id_vacancies = models.AutoField(primary_key=True)
+    id_vacancy = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255)
     description = models.TextField()
     money_from = models.IntegerField(default=0)
@@ -41,6 +41,9 @@ class Responses(models.Model):
     completed_at = models.DateTimeField(null=True, blank=True)
     moderator = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='moderated_requests', null=True, blank=True)
     name_human = models.TextField(blank=True, null=True)
+    education = models.TextField(blank=True, null=True)
+    experience = models.TextField(blank=True, null=True)
+    peculiarities_comm = models.TextField(blank=True, null=True)
 
     class Meta:
         managed = True
@@ -53,7 +56,7 @@ class ResponsesVacancies(models.Model):
     vacancy = models.ForeignKey(Vacancies, on_delete=models.CASCADE)
     quantity = models.IntegerField(default=1)
     order = models.IntegerField(default=1)
-    is_main = models.BooleanField(default=False)
+
 
     class Meta:
         managed = True
