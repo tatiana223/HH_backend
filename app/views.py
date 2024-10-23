@@ -224,7 +224,7 @@ def UpdateResponses(request, id_response):
     except Responses.DoesNotExist:
         return Response({"Ошибка": "Заявка на создание вакансии не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
-    allowed_fields = ['name_human']
+    allowed_fields = ['name_human', 'education', 'experience', 'peculiarities_comm']
 
     data = {key: value for key, value in request.data.items() if key in allowed_fields}
 
