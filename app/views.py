@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -37,37 +38,40 @@ def index(request):
     return render(request, "home_page.html", context)
 
 def vacancy(request, vacancy_id):
-    vacancy = get_object_or_404(Vacancies, id_vacancies=vacancy_id)
+    vacancy = get_object_or_404(Vacancies, id_vacancy=vacancy_id)
     context = {
         "vacancy": vacancy
     }
     return render(request, "vacancy_page.html", context)
 
-from django.shortcuts import render, get_object_or_404, redirect
-from .models import Responses, ResponsesVacancies, Vacancies
+
 
 def response(request, id):
     request_obj = Responses.objects.filter(id_response=id, status=1).first()
 
     if not request_obj:
-        # Вместо raise Http404, рендерим страницу с сообщением
         return render(request, 'no_response.html', {"message": "Отклик с таким ID не найден."})
 
-    request_services = ResponsesVacancies.objects.filter(request=request_obj)
-    vacancies_ids = request_services.values_list('vacancy__id_vacancies', flat=True)
-    vacancies = Vacancies.objects.filter(id_vacancies__in=vacancies_ids)
+    responses_vacancies = ResponsesVacancies.objects.filter(request=request_obj)
+    vacancies_ids = responses_vacancies.values_list('vacancy_id', flat=True)
+    vacancies = Vacancies.objects.filter(id_vacancy__in=vacancies_ids)
+
+    vacancies_with_count = {item.vacancy.id_vacancy: item.quantity for item in responses_vacancies}
+
+    # Добавляем количество откликов для каждой вакансии
+    for vacancy in vacancies:
+        vacancy.quantity = vacancies_with_count.get(vacancy.id_vacancy, 0)
 
     context = {
-        "vacancies": vacancies,
-        "response": request_obj,  # Изменили на 'response'
+        "vacancies": vacancies,  # Передаем вакансии с количеством
+        "response": request_obj,
     }
 
     return render(request, "responses.html", context)
 
-
 def add_vacancy(request):
     if request.method == 'POST':
-        id_vacancies = request.POST.get('id_vacancies')
+        id_vacancies = request.POST.get('id_vacancy')
         draft_response = GetDraftResponse()
 
         if draft_response is None:
@@ -76,11 +80,26 @@ def add_vacancy(request):
                 created_at=timezone.now(),
                 creator=GetCurrentUser(),
                 formed_at=timezone.now(),
+                name_human = "Иванов Иван Иванович",
+                education = "бакалавриат МГТУ им.Баумана, специальность 'Информатика и вычислительная техника'",
+                experience = "2 года",
+                peculiarities_comm = "Слабовидящий"
             )
 
-        existing_entry = ResponsesVacancies.objects.filter(request=draft_response, vacancy=id_vacancies).first()
-
-        if not existing_entry:
+        #existing_entry = ResponsesVacancies.objects.filter(request=draft_response, vacancy=id_vacancies).first()
+        existing_entry = ResponsesVacancies.objects.filter(request=draft_response, vacancy_id=id_vacancies).first()
+        if existing_entry:
+            # Увеличиваем, если вакансия уже есть в заявке
+            existing_entry.quantity += 1
+            existing_entry.save()
+        else:
+            # Если вакансий нет в заявке, создаем новую запись
+            ResponsesVacancies.objects.create(
+                request=draft_response,
+                vacancy=Vacancies.objects.get(id_vacancy=id_vacancies),
+                quantity=1  # Начинаем с 1
+            )
+        '''if not existing_entry:
             try:
                 vacancy = Vacancies.objects.get(id_vacancies=id_vacancies)
                 ResponsesVacancies.objects.create(
@@ -88,7 +107,7 @@ def add_vacancy(request):
                     vacancy=vacancy,
                 )
             except ObjectDoesNotExist:
-                print(f"Вакансия с ID {id_vacancies} не найдена.")
+                print(f"Вакансия с ID {id_vacancies} не найдена.")'''
 
         return HttpResponseRedirect(reverse('home_page'))
     return HttpResponseRedirect(reverse('home_page'))

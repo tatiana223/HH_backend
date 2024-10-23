@@ -6,9 +6,10 @@
         <h4 class="text-center">Отклики</h4>
     
         <div class="response-details mb-4">
-            <h5>Пользователь: {{ response.creator.username }}</h5>
-            <p>Дата отлика: {{ response.created_at|date:"d.m.Y H:i" }}</p>
-            <p>Статус: {{ response.get_status_display }}</p>  
+            <h4><strong>ФИО: </strong>{{ response.name_human }}</h4>
+            <h4>Образование: {{ response.education }}</h4>
+            <h4>Опыт работы: {{ response.experience }}</h4>
+            <h4>Комментарий: {{ response.peculiarities_comm }}</h4>
         </div>
 
 
@@ -16,15 +17,18 @@
             {% for vacancy in vacancies %}
                 <div class="card mb-3 d-flex flex-row-reverse">
                     <div class="card-img-container card-img-right">
-                        <img src="{{ vacancy.image }}" alt="{{ vacancy.name }}" class="card-img img-fluid" style="object-fit: cover; max-width: 400px;">
+                        <img src="{{ vacancy.url }}" alt="{{ vacancy.name }}" class="card-img img-fluid" style="object-fit: cover; max-width: 400px;">
                     </div>
                     <div class="card-body">
                         <h5 class="card-title">{{ vacancy.name }}</h5>
                         <p class="card-text">{{ vacancy.description|linebreaks }}</p>
                         <p class="card-text"><small class="text-muted">от {{ vacancy.money_from }}₽ до {{ vacancy.money_to }}₽</small></p>
-                        <p>Количество откликов: {{ vacancy.responsesvacancies_set.count }}</p>
+                        <label class="form-label">Количество вакансий: </label>
+   
+                            <input disabled type="number" class="form-control" value="{{ vacancy.quantity }}">
+                        
                     </div>
-                </div>
+
             {% endfor %}
         </div>
     <form action="{% url 'delete_response' %}" method="POST">

@@ -4,12 +4,17 @@ from datetime import datetime
 
 
 class Vacancies(models.Model):
-    id_vacancies = models.AutoField(primary_key=True)
+    STATUS_CHOICES = [
+        (1, 'Действует'),
+        (2, 'Удалена')
+    ]
+
+    id_vacancy = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255)
     description = models.TextField()
     money_from = models.IntegerField(default=0)
     money_to = models.IntegerField(default=0)
-    image = models.TextField(max_length=1024, null=True, blank=True)
+    url = models.TextField(max_length=1024, null=True, blank=True)
     city = models.CharField(max_length=255, default='Неизвестно')
     name_company = models.CharField(max_length=255, default='Default company name')
     peculiarities = models.TextField(default='Default company name')
@@ -21,8 +26,12 @@ class Vacancies(models.Model):
 
 class Responses(models.Model):
     STATUS_CHOICES = (
-        (1, 'Действующая'),
+        (1, 'Черновик'),
         (2, 'Удалена'),
+        (3, 'Сформирована'),
+        (4, 'Завершена'),
+        (5, 'Отклонена'),
+
     )
 
     id_response = models.AutoField(primary_key=True)  # Автоинкрементное поле
@@ -32,7 +41,10 @@ class Responses(models.Model):
     formed_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     moderator = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='moderated_requests', null=True, blank=True)
-
+    name_human = models.TextField(blank=True, null=True)
+    education = models.TextField(blank=True, null=True)
+    experience = models.TextField(blank=True, null=True)
+    peculiarities_comm = models.TextField(blank=True, null=True)
 
     class Meta:
         managed = True
@@ -45,7 +57,6 @@ class ResponsesVacancies(models.Model):
     vacancy = models.ForeignKey(Vacancies, on_delete=models.CASCADE)
     quantity = models.IntegerField(default=1)
     order = models.IntegerField(default=1)
-    is_main = models.BooleanField(default=False)
 
     class Meta:
         managed = True
