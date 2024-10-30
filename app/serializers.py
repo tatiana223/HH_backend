@@ -13,11 +13,12 @@ class VacanciesSerializer(serializers.ModelSerializer):
             'description': {'required': False}
         }
 class ResponsesSerializer(serializers.ModelSerializer):
-    #creator = serializers.CharField(source='creator.username', read_only=True)
-    #moderator = serializers.CharField(source='moderator.username', read_only=True)
+    creator = serializers.CharField(source='creator.username', read_only=True)
+    moderator = serializers.CharField(source='moderator.username', read_only=True)
 
     class Meta:
         model = Responses
+
         fields = '__all__'
 
 # Сериализатор для модели ResponsesVacancies (Связь между откликами и вакансиями)
@@ -28,7 +29,7 @@ class ResponsesVacanciesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ResponsesVacancies
-        fields = ['mm_id', 'request', 'vacancy', 'quantity', 'order', 'count_responses']
+        fields = ['vacancy', 'quantity', 'order', 'count_responses']
 
     def get_count_responses(self, obj):
         # Подсчитываем количество откликов для вакансии
