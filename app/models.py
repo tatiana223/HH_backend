@@ -37,7 +37,7 @@ class Responses(models.Model):
     status = models.IntegerField(choices=STATUS_CHOICES, default=1)
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_responses')
     created_at = models.DateTimeField(auto_now_add=True)
-    formed_at = models.DateTimeField(null=True, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     moderator = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='moderated_requests', null=True, blank=True)
     name_human = models.TextField(blank=True, null=True)

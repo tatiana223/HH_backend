@@ -28,11 +28,11 @@ def VacanciesList(request):
 
     serializer = VacanciesSerializer(vacancies, many=True)
 
-    # Предполагается, что у вас есть функция для получения черновика заявки
-    if GetDraftResponse():
-        id_response = GetDraftResponse().id_response
+    # Получаем черновик заявки один раз
+    draft_response = GetDraftResponse()
+    if draft_response:
+        id_response = draft_response.id_response
         count = ResponsesVacancies.objects.filter(request=id_response).count()
-
     else:
         id_response = None
         count = 0
@@ -176,11 +176,11 @@ def UpdateVacancyImage(request, vacancy_id):
 @api_view(["GET"])
 def ResponsesList(request):
     status = int(request.GET.get("status", 0))
-    date_submitted_start = request.GET.get("date_submitted_start")
-    date_submitted_end = request.GET.get("date_submitted_end")
+    date_submitted_start = request.GET.get("formed_at")
+    date_submitted_end = request.GET.get("deleted_at")
 
-    #responses = Responses.objects.exclude(status__in=[1, 2])
-    responses = Responses.objects.all()
+
+    responses = Responses.objects.exclude(status__in=[1,2])
     if status:
         responses = responses.filter(status=status)
 
@@ -190,6 +190,7 @@ def ResponsesList(request):
     if date_submitted_end and parse_datetime(date_submitted_end):
         responses = responses.filter(submitted__lt=parse_datetime(date_submitted_end))
 
+
     serializer = ResponsesSerializer(responses, many=True)
 
     return Response(serializer.data)
@@ -198,15 +199,15 @@ def ResponsesList(request):
 @api_view(["GET"])
 def GetResponsesnById(request, id_response):
     try:
-        # Используйте id_response напрямую, так как это первичный ключ
+
         responses = Responses.objects.get(id_response=id_response)
     except Responses.DoesNotExist:
-        return Response({"Ошибка": "Заявка на создание вакансии не найдена"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"Ошибка": "Заявка на создание отклика не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
     responses_serializer = ResponsesSerializer(responses)
 
-    # Здесь вы можете фильтровать ResponsesVacancies по id_response, если это правильно
-    vacancies_responses = ResponsesVacancies.objects.filter(request =responses)  # Исправьте здесь, если 'response' - это правильное имя поля
+
+    vacancies_responses = ResponsesVacancies.objects.filter(request =responses)
     vacancies_serializer = ResponsesVacanciesSerializer(vacancies_responses, many=True)
 
     response_data = {
@@ -250,11 +251,10 @@ def UpdateStatusUser(request, id_response):
     except Responses.DoesNotExist:
         return Response({"Ошибка": "Заявка не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
-    '''if responses.status != 1:
+    if responses.status != 1:
         return Response({"Ошибка": "Заявку нельзя изменить, так как она не в статусе 'Черновик'"}, status=status.HTTP_400_BAD_REQUEST)
-'''
-    required_fields = ['name_human']
 
+    required_fields = ['name_human', 'education', 'experience', 'peculiarities_comm']
     missing_fields = [field for field in required_fields if not getattr(responses, field)]
 
     if missing_fields:
@@ -263,7 +263,8 @@ def UpdateStatusUser(request, id_response):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    responses.status = 3
+    # Use request.data instead of request.body
+    responses.status = request.data.get('status')
     responses.submitted = timezone.now()
     responses.save()
 
@@ -307,6 +308,7 @@ def DeleteResponses(request, id_response):
 '''
     # Установите статус на "Удалена"
     responses.status = 2
+    responses.deleted_at = timezone.now()
     responses.save()
 
     return Response(status=status.HTTP_204_NO_CONTENT)  # Возврат 204 при успешном удалении
