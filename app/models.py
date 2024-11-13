@@ -1,6 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import User
 from datetime import datetime
+import django.contrib.auth.models
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, Group, Permission
+
 
 
 class Vacancies(models.Model):
@@ -35,15 +38,21 @@ class Responses(models.Model):
 
     id_response = models.AutoField(primary_key=True)  # Автоинкрементное поле
     status = models.IntegerField(choices=STATUS_CHOICES, default=1)
-    creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_responses')
+    creator = models.ForeignKey(django.contrib.auth.models.User, on_delete=models.CASCADE, related_name='created_responses')
     created_at = models.DateTimeField(auto_now_add=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
-    moderator = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='moderated_requests', null=True, blank=True)
+    moderator = models.ForeignKey(django.contrib.auth.models.User, on_delete=models.SET_NULL, related_name='moderated_requests', null=True,
+                                  blank=True)
     name_human = models.TextField(blank=True, null=True)
     education = models.TextField(blank=True, null=True)
     experience = models.TextField(blank=True, null=True)
     peculiarities_comm = models.TextField(blank=True, null=True)
+
+    """def save(self, *args, **kwargs):
+        if not self.interview_date:  # Устанавливаем дату собеседования только при создании
+            self.interview_date = self.created_at + timedelta(days=30)
+        super().save(*args, **kwargs)"""
 
     class Meta:
         managed = True
@@ -55,11 +64,12 @@ class ResponsesVacancies(models.Model):
     request = models.ForeignKey(Responses, on_delete=models.CASCADE)
     vacancy = models.ForeignKey(Vacancies, on_delete=models.CASCADE)
     quantity = models.IntegerField(default=1)
-    order = models.IntegerField(default=1)
+
 
 
     class Meta:
         managed = True
         db_table = 'responses_vacancies'
         unique_together = ('request', 'vacancy')
+
 

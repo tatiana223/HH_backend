@@ -1,9 +1,24 @@
 from django.urls import include, path
 from app import views
 from rest_framework import routers
+from rest_framework import permissions
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
 
 router = routers.DefaultRouter()
-
+router.register(r'user', views.UserViewSet, basename='user')
+schema_view = get_schema_view(
+   openapi.Info(
+      title="Snippets API",
+      default_version='v1',
+      description="Test description",
+      terms_of_service="https://www.google.com/policies/terms/",
+      contact=openapi.Contact(email="contact@snippets.local"),
+      license=openapi.License(name="BSD License"),
+   ),
+   public=True,
+   permission_classes=(permissions.AllowAny,),
+)
 urlpatterns = [
     path('', include(router.urls)),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
@@ -24,10 +39,10 @@ urlpatterns = [
     path('responses/<int:id_response>/delete_response/', views.DeleteResponses, name='delete_response'),
 
     path('vacancies_responses/<int:mm_id>/delete_vacancy_from_response/', views.DeletVacancyFromonResponse, name='delete_vacancy_from_response'),
-    path('vacancies_responses/<int:mm_id>/update_response/', views.UpdateResponsesVacancies, name='update_responses'),
+    path('vacancies_responses/<int:mm_id>/update_response/', views.UpdateResponsesVacancies, name='update_responses_vacancies'),
+    path('login/<int:user_id>/update_user/', views.UpdateUser, name='update_user'),
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
 
-    path('users/register/', views.register, name='register'),
-    path('users/<int:user_id>/update_user/', views.UpdateUser, name='update_user'),
-    path('users/login/', views.login, name='login'),
-    path('users/logout/', views.logout_view, name='logout'),
 ]

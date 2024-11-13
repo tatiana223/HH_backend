@@ -1,7 +1,8 @@
 import os
 from pathlib import Path
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -13,6 +14,7 @@ SECRET_KEY = 'django-insecure-jug1gtqrsut0pl-3)__4@*wybxdqibme=0p==sh6_h)njz)9ok
 
 # SECURITY WARNING: don't run with debug turned on in airlineion!
 DEBUG = True
+
 
 ALLOWED_HOSTS = []
 
@@ -27,12 +29,16 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # DRF
-    'rest_framework',
 
+    # DRF
+    'drf_yasg',
+    'rest_framework',
     # Наше приложение
-    'app'
+    'app',
+
 ]
+
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -43,6 +49,18 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ]
+
+}
 
 ROOT_URLCONF = 'lab1.urls'
 
@@ -64,10 +82,6 @@ TEMPLATES = [
     },
 ]
 
-'''STATICFILES_FINDERS = [
-    'django.contrib.staticfiles.finders.FileSystemFinder',
-    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-]'''
 
 WSGI_APPLICATION = 'lab1.wsgi.application'
 
@@ -90,6 +104,7 @@ DATABASES = {
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -104,7 +119,6 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
-
 
 
 # Internationalization
@@ -124,10 +138,22 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Default primary key field type
+# https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
+CORS_ALLOW_ALL_ORIGINS = True  # Только для отладки
+# Включите сессионное хранение в базе данных (или используйте другой метод)
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'# или другой бэкенд
+SESSION_COOKIE_NAME = 'session_id'
+SESSION_COOKIE_AGE = 1209600# Убедитесь, что это имя совпадает с тем, что ожидается
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+SESSION_REDIS_PREFIX = "django_session"
 
 AWS_STORAGE_BUCKET_NAME = 'images'
 AWS_ACCESS_KEY_ID = 'minio'
 AWS_SECRET_ACCESS_KEY = 'minio123'
 AWS_S3_ENDPOINT_URL = 'minio:9000'
 MINIO_USE_SSL = False
+
+REDIS_HOST = 'redis'
+REDIS_PORT = 6379
