@@ -1,7 +1,6 @@
+from .models import *
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Vacancies, Responses, ResponsesVacancies
-
 
 # Сериализатор для модели Vacancies
 class VacanciesSerializer(serializers.ModelSerializer):
@@ -12,6 +11,14 @@ class VacanciesSerializer(serializers.ModelSerializer):
             'name': {'required': False},
             'description': {'required': False}
         }
+
+        """def get_fields(self):
+            new_fields = OrderedDict()
+            for name, field in super().get_fields().items():
+                field.required = False
+                new_fields[name] = field
+            return new_fields"""
+
 class ResponsesSerializer(serializers.ModelSerializer):
     creator = serializers.CharField(source='creator.username', read_only=True)
     moderator = serializers.CharField(source='moderator.username', read_only=True)
@@ -21,6 +28,13 @@ class ResponsesSerializer(serializers.ModelSerializer):
 
         fields = '__all__'
 
+        """def get_fields(self):
+            new_fields = OrderedDict()
+            for name, field in super().get_fields().items():
+                field.required = False
+                new_fields[name] = field
+            return new_fields"""
+
 # Сериализатор для модели ResponsesVacancies (Связь между откликами и вакансиями)
 class ResponsesVacanciesSerializer(serializers.ModelSerializer):
     #request = ResponsesSerializer()  # Включаем сериализатор откликов
@@ -29,19 +43,42 @@ class ResponsesVacanciesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ResponsesVacancies
-        fields = ['vacancy', 'quantity', 'order', 'count_responses']
+        fields = ['vacancy', 'quantity', 'count_responses']
 
-    def get_count_responses(self, obj):
+    def __init__(self, *args, **kwargs):
+        fields = kwargs.pop('fields', None)  # Получаем список полей из аргументов
+        super().__init__(*args, **kwargs)
+        if fields is not None:
+            # Оставляем только указанные поля
+            allowed = set(fields)
+            existing = set(self.fields.keys())
+            for field_name in existing - allowed:
+                self.fields.pop(field_name)
+
+    """def get_count_responses(self, obj):
         # Подсчитываем количество откликов для вакансии
         return Responses.objects.filter(id_response=obj.request.id_response).count()
 
-# Сериализатор для пользователей
+    def get_fields(self):
+        new_fields = OrderedDict()
+        for name, field in super().get_fields().items():
+            field.required = False
+            new_fields[name] = field
+        return new_fields"""
+
+
 class UserSerializer(serializers.ModelSerializer):
+    is_staff = serializers.BooleanField(default=False, required=False)
+    is_superuser = serializers.BooleanField(default=False, required=False)
+
     class Meta:
+        #model = CustomUser
+        #fields = ("id", "email", "password", "first_name", "last_name", "date_joined", "password", "username") # Для PUT пользователя
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'date_joined']
+        fields = ("id", "email", "password", "first_name", "last_name", "date_joined", "password", "username", "is_staff", "is_superuser") # Для PUT пользователя
 
 
+"""
 class UserRegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -50,6 +87,8 @@ class UserRegisterSerializer(serializers.ModelSerializer):
             'password': {'write_only': True}
         }
         read_only_fields = ["id"]
+
+
 
     def create(self, validated_data):
         user = User.objects.create(
@@ -62,9 +101,23 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         user.save()
         return user
 
+    def get_fields(self):
+        new_fields = OrderedDict()
+        for name, field in super().get_fields().items():
+            field.required = False
+            new_fields[name] = field
+        return new_fields
+
 
 
 # Сериализатор для авторизации пользователя
 class UserLoginSerializer(serializers.Serializer):
     username = serializers.CharField(required=True)
     password = serializers.CharField(required=True)
+
+    def get_fields(self):
+        new_fields = OrderedDict()
+        for name, field in super().get_fields().items():
+            field.required = False
+            new_fields[name] = field
+        return new_fields"""

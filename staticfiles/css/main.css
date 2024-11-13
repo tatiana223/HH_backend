@@ -1,0 +1,269 @@
+:root {
+    --bg: #fff;
+    --card-bg: #F9F9F9;
+    --card-border-color: rgba(0, 0, 0, .125);
+    --color: #000;
+    --header-bg: rgba(236, 61, 46, 0.59);
+    --header-color: #fff;
+    --primary-btn-color: #fff;
+    --primary-btn-bg: #0c73fe;
+    --bin-bg: rgba(214, 60, 47, 0.96);
+    --bin-color: var(--primary-btn-color);
+    --badge-bg: rgba(104, 17, 9, 0.59);
+    --badge-color: var(--primary-btn-color);
+}
+
+.wrapper {
+    background: var(--bg);
+    min-height: 100vh;
+    color: var(--color);
+}
+
+.navbar {
+    background-color: var(--header-bg);
+    background-image: linear-gradient(to bottom, rgba(51, 51, 51, 0.5), rgba(51, 51, 51, 0.5)), url("https://strategicfinancialpartners.com/wp-content/uploads/2019/09/Main-Page-Slider-Image-no3-V2-1.jpg");
+    background-size: cover;
+    background-position: 25% 75%;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+
+    height: 50%; /* Чтобы хедер занимал всю высоту контейнера */
+    display: flex;
+    align-items: center; /* Вертикальное центрирование содержимого */
+    position: absolute;
+    top: 0%;
+    left: 0%;
+    width: 100%;
+    z-index: 0;
+    width: 1600px;
+    height: 300px;
+    margin: 0 auto;
+
+}
+
+.navbar-brand {
+    display: flex;
+    align-items: center;
+    font-size: 36px; /* Увеличиваем размер шрифта до 36 пикселей */
+    font-weight: bold;
+}
+
+
+.navbar-brand-content {
+    display: flex;
+    align-items: center;
+    font-size: 36px;
+    font-weight: bold;
+}
+
+.navbar .title {
+    display: flex !important;
+    align-items: center !important;
+    font-size: 36px; /* Увеличиваем размер шрифта до 36 пикселей */
+    font-weight: bold;
+}
+.logo {
+    margin-right: 10px; /* Добавляем отступ между логотипом и текстом */
+    max-height: 100px; /* Устанавливаем максимальную высоту логотипа */
+}
+
+
+
+.search-bar input.form-control {
+    border-radius: 10px;
+    border: 2px solid #0070FF;
+}
+
+.search-bar .btn {
+    border-radius: 10px;
+    border: 2px solid #0070FF;
+}
+
+.nav-link, .navbar-brand{
+    color: var(--header-color) !important;
+
+}
+
+.nav-link:hover, .navbar-brand:hover{
+    color: hsl(from var(--header-color) h s calc(l - 10)) !important;
+}
+
+.bin.btn.btn-primary {
+    position: relative !important;
+    background-color: var(--bin-bg) !important;
+    border-color: var(--bin-bg) !important;
+    color: var(--bin-color) !important;
+    border-radius: 10px;
+}
+
+.card-info {
+    position: relative;
+}
+
+.card-info img {
+    max-width: 150px;
+    height: auto;
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+
+.card-info .card-title,
+.card-info .card-text {
+    text-align: left;
+    margin-bottom: 0.5rem;
+}
+
+.card-btns {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.card-btns .btn {
+    margin-top: 0.5rem;
+}
+
+.card img{
+  max-width: 200px;
+  height: auto;
+}
+
+div.image{
+    max-width: 5px;
+    height: auto;
+    float: left;
+    margin-right: 1rem;
+}
+
+.bin.btn.btn-primary:hover, .bin.btn.btn-primary:hover .badge  {
+    background-color: hsl(from var(--bin-bg) h s calc(l - 5)) !important;
+    border-color: hsl(from var(--bin-bg) h s calc(l - 5)) !important;
+    color: var(--bin-color) !important;
+}
+
+.cards-wrapper {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(500px, 5fr));
+    gap: 50px;
+    justify-content: space-between;
+    margin-top: 50px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.cards-wrapper .card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border-color);
+    border-radius: 25px;
+    transition: box-shadow 0.3s, transform 0.3s;
+}
+
+.cards-wrapper .card:hover {
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    transform: translateY(-5px);
+}
+
+.cards-wrapper .card .card-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+}
+
+.cards-wrapper .card .card-body .card-info {
+    margin-bottom: 5px;
+}
+
+.cards-wrapper .card .card-body .card-info p {
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.company-preview {
+    width: 100%;
+    height: 150px;
+    background-size: cover;
+}
+
+.company-info {
+    display: flex;
+    align-items: center;
+}
+
+.company-info .company-image {
+    order: 2;
+    max-width: 50%;
+    height: auto;
+    margin-left: 2rem;
+}
+
+.card-img-container {
+    overflow: hidden;
+    margin-left: 1rem;
+}
+
+.card-img {
+    width: 200%;
+    height: 200%;
+    object-fit: cover;
+}
+
+.card-img-right {
+    order: 2;
+}
+
+main {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    padding: 25px 0;
+}
+
+.badge {
+    position: absolute !important;
+    top: -10px !important;
+    right: -15px;
+    color: var(--badge-color) !important;
+    background-color: var(--badge-bg) !important;
+    transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+}
+
+.card {
+    position: relative;
+    overflow: hidden;
+}
+
+.justify-end {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.card .form-group {
+    margin-bottom: 25px;
+}
+
+.btn-primary {
+    background-color: var(--primary-btn-bg) !important;
+    border-color: var(--primary-btn-bg) !important;
+}
+
+.btn-primary:hover {
+    background-color: hsl(from var(--primary-btn-bg) h s calc(l - 10)) !important;
+    border-color: hsl(from var(--primary-btn-bg) h s calc(l - 10)) !important;
+}
+
+.card-btns {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.card-btns .btn {
+    margin-right: auto;
+    width: 100%;
+    border-radius: 10px;
+}
+
+.description {
+    white-space: pre-line;
+}
+
+
