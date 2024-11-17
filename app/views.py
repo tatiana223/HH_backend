@@ -25,8 +25,12 @@ from rest_framework.authentication import SessionAuthentication
 from app.permissions import *
 
 def GetDraftResponse(request):
-    current_user = request.user
-    return Responses.objects.filter(creator=current_user.id, status=1).first()  # так как у пользователя только один черновик, то берем первый элемент, иначе None
+    if not request.user.is_authenticated:
+        return None
+    try:
+        return Responses.objects.filter(creator=request.user, status="1").first()
+    except Responses.DoesNotExist:
+        return None
 
 
 class CsrfExemptSessionAuthentication(SessionAuthentication):
@@ -34,18 +38,18 @@ class CsrfExemptSessionAuthentication(SessionAuthentication):
         return  # Отключаем CSRF-проверку
 
 
+#ДОМЕН УСЛУГИ
+# GET список с фильтрацией. В списке услуг возвращается id заявки-черновика этого пользователя для страницы заявки и количество услуг в этой заявке
 @api_view(["GET"])
 @permission_classes([IsAuthenticatedOrReadOnly])
 def VacanciesList(request):
     vacancy_name = request.GET.get("vacancy_name", '')
-    vacancies = Vacancies.objects.filter(name__istartswith=vacancy_name)
-
+    vacancies = Vacancies.objects.filter(status=1, name__istartswith=vacancy_name)
     serializer = VacanciesSerializer(vacancies, many=True)
 
-    # Получаем черновик заявки один раз
     if GetDraftResponse(request):
         id_response = GetDraftResponse(request).id_response
-        quantity = GetDraftResponse.objects.filter(id_response=id_response).count()
+        quantity = ResponsesVacancies.objects.filter(id_response=id_response).count()
     else:
         id_response = None
         quantity = 0
@@ -56,8 +60,6 @@ def VacanciesList(request):
         "quantity": quantity,
     }
     return Response(response, status=status.HTTP_200_OK)
-
-
 @api_view(["GET"])
 @permission_classes([IsAuthenticatedOrReadOnly])
 def GetVacancyById(request, vacancy_id):
@@ -248,15 +250,17 @@ def ResponsesList(request):
 @permission_classes([IsAuthenticated])
 def GetResponsesnById(request, id_response):
     try:
-
-        responses = Responses.objects.get(id_response=id_response)
+        if request.user.is_staff or request.user.is_superuser:
+            response = Responses.objects.get(id_response=id_response)
+        else:
+            response = Responses.objects.get(id_response=id_response, creator=request.user, status=1)
     except Responses.DoesNotExist:
         return Response({"Ошибка": "Заявка на создание отклика не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
-    responses_serializer = ResponsesSerializer(responses)
+    responses_serializer = ResponsesSerializer(response)
 
 
-    vacancies_responses = ResponsesVacancies.objects.filter(request =responses)
+    vacancies_responses = ResponsesVacancies.objects.filter(request =response)
     vacancies_serializer = ResponsesVacanciesSerializer(vacancies_responses, many=True)
 
     response_data = {

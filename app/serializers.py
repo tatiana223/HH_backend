@@ -4,21 +4,19 @@ from django.contrib.auth.models import User
 
 # Сериализатор для модели Vacancies
 class VacanciesSerializer(serializers.ModelSerializer):
+    #response_count = serializers.SerializerMethodField()  # Добавляем поле для количества откликов
+
     class Meta:
         model = Vacancies
-        fields = ['id_vacancy', 'name', 'description', 'money_from', 'money_to', 'image', 'city', 'name_company', 'peculiarities']
-        extra_kwargs = {
-            'name': {'required': False},
-            'description': {'required': False}
-        }
+        fields = [
+            'id_vacancy', 'name', 'description', 'money_from', 'money_to',
+            'image', 'city', 'name_company', 'peculiarities'
+        ]
 
-        """def get_fields(self):
-            new_fields = OrderedDict()
-            for name, field in super().get_fields().items():
-                field.required = False
-                new_fields[name] = field
-            return new_fields"""
-
+    """def get_response_count(self, obj):
+        # Считаем количество откликов для вакансии
+        return ResponsesVacancies.objects.filter(vacancy=obj).count()
+"""
 class ResponsesSerializer(serializers.ModelSerializer):
     creator = serializers.CharField(source='creator.username', read_only=True)
     moderator = serializers.CharField(source='moderator.username', read_only=True)
@@ -37,13 +35,13 @@ class ResponsesSerializer(serializers.ModelSerializer):
 
 # Сериализатор для модели ResponsesVacancies (Связь между откликами и вакансиями)
 class ResponsesVacanciesSerializer(serializers.ModelSerializer):
-    #request = ResponsesSerializer()  # Включаем сериализатор откликов
-    vacancy = VacanciesSerializer()  # Включаем сериализатор вакансий
-    count_responses = serializers.SerializerMethodField()  # Поле для подсчета откликов
+    id_vacancy = Vacancies()
+    quantity = serializers.IntegerField()
 
     class Meta:
         model = ResponsesVacancies
-        fields = ['vacancy', 'quantity', 'count_responses']
+        fields = ["vacancy", "request", "quantity"]
+
 
     def __init__(self, *args, **kwargs):
         fields = kwargs.pop('fields', None)  # Получаем список полей из аргументов
@@ -55,11 +53,14 @@ class ResponsesVacanciesSerializer(serializers.ModelSerializer):
             for field_name in existing - allowed:
                 self.fields.pop(field_name)
 
-    """def get_count_responses(self, obj):
-        # Подсчитываем количество откликов для вакансии
-        return Responses.objects.filter(id_response=obj.request.id_response).count()
+    """def get_fields(self):
+        new_fields = OrderedDict()
+        for name, field in super().get_fields().items():
+            field.required = False
+            new_fields[name] = field
+        return new_fields"""
 
-    def get_fields(self):
+    """def get_fields(self):
         new_fields = OrderedDict()
         for name, field in super().get_fields().items():
             field.required = False
