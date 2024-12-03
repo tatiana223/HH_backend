@@ -1,9 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
-from datetime import datetime
 import django.contrib.auth.models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, Group, Permission
-
+from datetime import timedelta
 
 
 class Vacancies(models.Model):
@@ -11,12 +10,12 @@ class Vacancies(models.Model):
         (1, 'Действует'),
         (2, 'Удалена')
     ]
-    id_vacancy = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=255)
+    vacancy_id = models.AutoField(primary_key=True)
+    vacancy_name = models.CharField(max_length=255)
     description = models.TextField()
     money_from = models.IntegerField(default=0)
     money_to = models.IntegerField(default=0)
-    image = models.TextField(max_length=1024, null=True, blank=True)
+    url = models.TextField(max_length=1024, null=True, blank=True)
     city = models.CharField(max_length=255, default='Неизвестно')
     name_company = models.CharField(max_length=255, default='Default company name')
     peculiarities = models.TextField(default='Default company name')
@@ -48,11 +47,14 @@ class Responses(models.Model):
     education = models.TextField(blank=True, null=True)
     experience = models.TextField(blank=True, null=True)
     peculiarities_comm = models.TextField(blank=True, null=True)
+    vacancies = models.ManyToManyField('Vacancies', through='ResponsesVacancies', blank=True)  # Связь с вакансиями
+    interview_date = models.DateTimeField(null=True, blank=True)  # Поле для даты собеседования
 
-    """def save(self, *args, **kwargs):
-        if not self.interview_date:  # Устанавливаем дату собеседования только при создании
+    def save(self, *args, **kwargs):
+        # Установить дату собеседования, если она не задана
+        if not self.interview_date:
             self.interview_date = self.created_at + timedelta(days=30)
-        super().save(*args, **kwargs)"""
+        super().save(*args, **kwargs)
 
     class Meta:
         managed = True

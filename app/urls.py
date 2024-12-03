@@ -7,6 +7,7 @@ from drf_yasg import openapi
 
 router = routers.DefaultRouter()
 router.register(r'user', views.UserViewSet, basename='user')
+
 schema_view = get_schema_view(
    openapi.Info(
       title="Snippets API",
@@ -23,7 +24,7 @@ urlpatterns = [
     path('', include(router.urls)),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 
-    path('vacancies/', views.VacanciesList, name='vacancies_list'),
+    path('vacancies/', views.VacanciesList, name='vacancies_list'),  # Убедитесь, что это правильный путь
     path('vacancies/<int:vacancy_id>/', views.GetVacancyById, name='get_vacancy_by_id'),
     path('vacancies/create_vacancy/', views.CreateVacancy, name='create_vacancy'),
     path('vacancies/<int:vacancy_id>/edit_vacancy/', views.EditVacancy, name='edit_vacancy'),
