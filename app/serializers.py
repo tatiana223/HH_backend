@@ -1,22 +1,17 @@
+from collections import OrderedDict
+
 from .models import *
 from rest_framework import serializers
 from django.contrib.auth.models import User
 
 # Сериализатор для модели Vacancies
 class VacanciesSerializer(serializers.ModelSerializer):
-    #response_count = serializers.SerializerMethodField()  # Добавляем поле для количества откликов
-
     class Meta:
         model = Vacancies
         fields = [
-            'id_vacancy', 'name', 'description', 'money_from', 'money_to',
-            'image', 'city', 'name_company', 'peculiarities'
+            'vacancy_id', 'vacancy_name', 'description', 'money_from', 'money_to',
+            'url', 'city', 'name_company', 'peculiarities'
         ]
-
-    """def get_response_count(self, obj):
-        # Считаем количество откликов для вакансии
-        return ResponsesVacancies.objects.filter(vacancy=obj).count()
-"""
 class ResponsesSerializer(serializers.ModelSerializer):
     creator = serializers.CharField(source='creator.username', read_only=True)
     moderator = serializers.CharField(source='moderator.username', read_only=True)
@@ -35,7 +30,7 @@ class ResponsesSerializer(serializers.ModelSerializer):
 
 # Сериализатор для модели ResponsesVacancies (Связь между откликами и вакансиями)
 class ResponsesVacanciesSerializer(serializers.ModelSerializer):
-    id_vacancy = Vacancies()
+    vacancy_id = Vacancies()
     quantity = serializers.IntegerField()
 
     class Meta:

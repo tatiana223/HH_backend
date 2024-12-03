@@ -3,11 +3,26 @@ import redis
 from django.contrib.auth.models import User, AnonymousUser
 from lab1.settings import REDIS_HOST, REDIS_PORT
 from rest_framework.exceptions import PermissionDenied
+from rest_framework import exceptions
 
 # Настройки подключения к Redis
 session_storage = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT)
 
 
+class AuthBySessionIDIfExists(permissions.BasePermission):
+    def authenticate(self, request):
+        session_id = request.COOKIES.get("session_id")
+
+        if session_id is None:
+            return None, None
+
+        try:
+            username = session_storage.get(session_id).decode("utf-8")
+
+            user = User.objects.get(username=username)
+            return user, None
+        except (User.DoesNotExist, AttributeError, TypeError) as e:
+            return None, None
 def get_user_from_session(request):
 
     session_id = request.COOKIES.get('session_id')

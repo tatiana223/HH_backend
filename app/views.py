@@ -1,34 +1,31 @@
-from django.contrib.sessions.backends.db import SessionStore
+from app.permissions import *
+from app.serializers import *
+from rest_framework.decorators import authentication_classes
+from .minio import add_pic
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
-from app.serializers import *
-from rest_framework.decorators import api_view, permission_classes,authentication_classes
-from .minio import add_pic
-from app.models import *
+from app.models import Vacancies, Responses, ResponsesVacancies
+from .serializers import VacanciesSerializer
+from .permissions import IsAuthenticatedOrReadOnly
 from django.contrib.auth.models import User, AnonymousUser
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-
 from drf_yasg.utils import swagger_auto_schema
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, logout
 from django.http import HttpResponse
-
 from rest_framework.permissions import AllowAny
 from rest_framework import viewsets
 import redis
 from django.conf import settings
 import uuid
-from django.views.decorators.csrf import csrf_exempt
-from app.permissions import *
 from rest_framework.authentication import SessionAuthentication
-
-from app.permissions import *
 
 def GetDraftResponse(request):
     if not request.user.is_authenticated:
         return None
     try:
-        return Responses.objects.filter(creator=request.user, status="1").first()
+        return Responses.objects.filter(creator=request.user, status=1).first()
     except Responses.DoesNotExist:
         return None
 
@@ -40,31 +37,38 @@ class CsrfExemptSessionAuthentication(SessionAuthentication):
 
 #ДОМЕН УСЛУГИ
 # GET список с фильтрацией. В списке услуг возвращается id заявки-черновика этого пользователя для страницы заявки и количество услуг в этой заявке
-@api_view(["GET"])
-@permission_classes([IsAuthenticatedOrReadOnly])
+@api_view(['GET'])
+@permission_classes([AllowAny])
+@authentication_classes([AuthBySessionIDIfExists])
 def VacanciesList(request):
-    vacancy_name = request.GET.get("vacancy_name", '')
-    vacancies = Vacancies.objects.filter(status=1, name__istartswith=vacancy_name)
+    vacancy_name = request.GET.get('vacancy_name', '')
+
+    vacancies = Vacancies.objects.filter(status=True).filter(vacancy_name__istartswith=vacancy_name)
+
     serializer = VacanciesSerializer(vacancies, many=True)
 
-    if GetDraftResponse(request):
-        id_response = GetDraftResponse(request).id_response
-        quantity = ResponsesVacancies.objects.filter(id_response=id_response).count()
-    else:
-        id_response = None
-        quantity = 0
+    draft_responses = None
+    vacancies_to_response = None
+    if request.user and request.user.is_authenticated:
+        try:
+            draft_responses = Responses.objects.filter(status=1, creator=request.user).first()
+            vacancies_to_response = len(draft_responses.vacancies.all()) if draft_responses else None
+        except Responses.DoesNotExist:
+            draft_responses = None
 
     response = {
-        "vacancies": serializer.data,
-        "draft_response": id_response,
-        "quantity": quantity,
+        'vacancies': serializer.data,
+        'draft_responses': draft_responses.pk if draft_responses else None,
+        'vacancies_to_response': vacancies_to_response,
     }
     return Response(response, status=status.HTTP_200_OK)
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticatedOrReadOnly])
 def GetVacancyById(request, vacancy_id):
     try:
-        vacancy = Vacancies.objects.get(id_vacancy=vacancy_id)
+        vacancy = Vacancies.objects.get(vacancy_id=vacancy_id, status=1)
     except Vacancies.DoesNotExist:
         return Response({"Ошибка": "Вакансия не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -98,7 +102,7 @@ def CreateVacancy(request):
 @permission_classes([IsAdmin])
 def EditVacancy(request, vacancy_id):
     try:
-        vacancy = Vacancies.objects.get(id_vacancy=vacancy_id)
+        vacancy = Vacancies.objects.get(vacancy_id=vacancy_id)
     except Vacancies.DoesNotExist:
         return Response({"Ошибка": "Вакансия не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -125,7 +129,7 @@ def EditVacancy(request, vacancy_id):
 @permission_classes([IsAdmin])
 def DeleteVacancy(request, vacancy_id):
     try:
-        vacancy = Vacancies.objects.get(id_vacancy=vacancy_id)
+        vacancy = Vacancies.objects.get(vacancy_id=vacancy_id)
     except Vacancies.DoesNotExist:
         return Response({"Ошибка": "Вакансия не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -144,7 +148,7 @@ def DeleteVacancy(request, vacancy_id):
 @permission_classes([IsAuthenticated])
 def AddVacancyToDraft(request, vacancy_id):
     try:
-        vacancy = Vacancies.objects.get(id_vacancy=vacancy_id)
+        vacancy = Vacancies.objects.get(vacancy_id=vacancy_id)
     except Vacancies.DoesNotExist:
         return Response({"error": "Вакансия не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -193,7 +197,7 @@ def AddVacancyToDraft(request, vacancy_id):
 @permission_classes([IsAdmin])
 def UpdateVacancyImage(request, vacancy_id):
     try:
-        vacancy = Vacancies.objects.get(id_vacancy=vacancy_id)
+        vacancy = Vacancies.objects.get(vacancy_id=vacancy_id)
     except Vacancies.DoesNotExist:
         return Response({"error": "Вакансия не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -220,7 +224,7 @@ def UpdateVacancyImage(request, vacancy_id):
 @authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def ResponsesList(request):
-    status = int(request.GET.get("status", 0))
+    status_filter = int(request.GET.get("status", 0))
     date_submitted_start = request.GET.get("formed_at")
     date_submitted_end = request.GET.get("deleted_at")
 
@@ -230,8 +234,8 @@ def ResponsesList(request):
         response = Responses.objects.exclude(status__in=[1, 2])
         response = response.filter(creator=request.user)
 
-    if status:
-        response = response.filter(status=status)
+    if status_filter :
+        response = response.filter(status=status_filter)
 
     if date_submitted_start and parse_datetime(date_submitted_start):
         response = response.filter(submitted__gte=parse_datetime(date_submitted_start))
@@ -482,12 +486,12 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ['create']:
-            permission_classes = [AllowAny]
+            permission_class = [AllowAny]
         elif self.action in ['list']:
-            permission_classes = [IsManager | IsAdmin ]
+            permission_class = [IsManager | IsAdmin ]
         else:
-            permission_classes = [IsAdmin]
-        return [permission() for permission in permission_classes]
+            permission_class = [IsAdmin]
+        return [permission() for permission in permission_class]
 
     def create(self, request):
         """

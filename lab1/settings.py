@@ -38,6 +38,9 @@ INSTALLED_APPS = [
 
 ]
 
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Сессии хранятся в базе данных
+SESSION_COOKIE_AGE = 3600  # Продолжительность сессии в секундах
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Сессия будет закрываться при закрытии браузера
 
 
 MIDDLEWARE = [
@@ -140,14 +143,18 @@ STATIC_URL = 'static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
-CORS_ALLOW_ALL_ORIGINS = True  # Только для отладки
-# Включите сессионное хранение в базе данных (или используйте другой метод)
-SESSION_ENGINE = 'django.contrib.sessions.backends.db'# или другой бэкенд
-SESSION_COOKIE_NAME = 'session_id'
-SESSION_COOKIE_AGE = 1209600# Убедитесь, что это имя совпадает с тем, что ожидается
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-SESSION_REDIS_PREFIX = "django_session"
+
+SESSION_CACHE_ALIAS = 'default'  # Использование кэша по умолчанию
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/1',  # Убедитесь, что Redis работает и доступен
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
+}
 
 AWS_STORAGE_BUCKET_NAME = 'images'
 AWS_ACCESS_KEY_ID = 'minio'
@@ -157,3 +164,11 @@ MINIO_USE_SSL = False
 
 REDIS_HOST = 'redis'
 REDIS_PORT = 6379
+
+INSTALLED_APPS += ['corsheaders']
+
+MIDDLEWARE += ['corsheaders.middleware.CorsMiddleware']
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # React
+]
