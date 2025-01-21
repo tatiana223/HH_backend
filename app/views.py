@@ -20,6 +20,8 @@ import redis
 from django.conf import settings
 import uuid
 from rest_framework.authentication import SessionAuthentication
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 def GetDraftResponse(request):
     if not request.user.is_authenticated:
@@ -37,6 +39,50 @@ class CsrfExemptSessionAuthentication(SessionAuthentication):
 
 #ДОМЕН УСЛУГИ
 # GET список с фильтрацией. В списке услуг возвращается id заявки-черновика этого пользователя для страницы заявки и количество услуг в этой заявке
+@swagger_auto_schema(
+    method='get',
+    manual_parameters=[
+        openapi.Parameter(
+            'vacancy_name',
+            openapi.IN_QUERY,
+            description='Название вакансии для фильтрации',
+            type=openapi.TYPE_STRING
+        )
+    ],
+    responses={
+        status.HTTP_200_OK: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "vacancies": openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            "vacancy_id": openapi.Schema(type=openapi.TYPE_INTEGER),
+                            "vacancy_name": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                            "description": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                            "money_from": openapi.Schema(type=openapi.TYPE_INTEGER, nullable=False),
+                            "money_to": openapi.Schema(type=openapi.TYPE_INTEGER, nullable=False),
+                            "city": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                            "name_company": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                            "peculiarities": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                            "url": openapi.Schema(type=openapi.TYPE_STRING),
+                        }
+                    ),
+                    nullable=False,
+                ),
+                "draft_responses": openapi.Schema(
+                    type=openapi.TYPE_INTEGER,
+                    nullable=True,
+                ),
+                "count": openapi.Schema(
+                    type=openapi.TYPE_INTEGER,
+                    nullable=True,
+                ),
+            },
+        )
+    },
+)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 @authentication_classes([AuthBySessionIDIfExists])
@@ -45,14 +91,20 @@ def VacanciesList(request):
 
     vacancies = Vacancies.objects.filter(status=True).filter(vacancy_name__istartswith=vacancy_name)
 
+    if not vacancies.exists():
+        return JsonResponse({'error': 'No vacancies found'}, status=404)
     serializer = VacanciesSerializer(vacancies, many=True)
 
     draft_responses = None
     vacancies_to_response = None
     if request.user and request.user.is_authenticated:
         try:
-            draft_responses = Responses.objects.filter(status=1, creator=request.user).first()
-            vacancies_to_response = len(draft_responses.vacancies.all()) if draft_responses else None
+            if request.user and request.user.is_authenticated:
+                draft_responses = Responses.objects.filter(status=1, creator=request.user).first()
+                vacancies_to_response = len(draft_responses.vacancies.all()) if draft_responses else None
+            else:
+                draft_responses = None
+                vacancies_to_response = None
         except Responses.DoesNotExist:
             draft_responses = None
 
@@ -63,7 +115,25 @@ def VacanciesList(request):
     }
     return Response(response, status=status.HTTP_200_OK)
 
-
+@swagger_auto_schema(
+    method='get',
+    responses={
+        status.HTTP_200_OK: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "vacancy_id": openapi.Schema(type=openapi.TYPE_INTEGER),
+                "vacancy_name": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                "description": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                "money_from": openapi.Schema(type=openapi.TYPE_INTEGER, nullable=False),
+                "money_to": openapi.Schema(type=openapi.TYPE_INTEGER, nullable=False),
+                "city": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                "name_company": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                "peculiarities": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                "url": openapi.Schema(type=openapi.TYPE_STRING),
+            },
+        )
+    },
+)
 @api_view(["GET"])
 @permission_classes([IsAuthenticatedOrReadOnly])
 def GetVacancyById(request, vacancy_id):
@@ -142,7 +212,54 @@ def DeleteVacancy(request, vacancy_id):
     serializer = VacanciesSerializer(vacancies, many=True)
     return Response(serializer.data)
 
-@swagger_auto_schema(method='post', request_body=ResponsesSerializer)
+@swagger_auto_schema(method='post', responses={
+        status.HTTP_200_OK: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "responses": openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "id_response": openapi.Schema(type=openapi.TYPE_INTEGER, description="Уникальный идентификатор заявки."),
+                        "status": openapi.Schema(type=openapi.TYPE_INTEGER, description="Статус заявки."),
+                        "created_at": openapi.Schema(type=openapi.TYPE_STRING, format="date-time", description="Дата и время создания заявки."),
+                        "creator": openapi.Schema(type=openapi.TYPE_STRING, description="Имя пользователя, создавшего заявку."),
+                        "moderator": openapi.Schema(type=openapi.TYPE_STRING, nullable=True, description="Имя модератора заявки (если есть)."),
+                        "completed_at": openapi.Schema(type=openapi.TYPE_STRING, format="date-time", nullable=True, description="Дата завершения заявки."),
+                        "deleted_at": openapi.Schema(type=openapi.TYPE_STRING, format="date-time", nullable=True, description="Дата удаления заявки."),
+                        "name_human": openapi.Schema(type=openapi.TYPE_STRING, nullable=True, description="ФИО кондидата."),
+                        "education": openapi.Schema(type=openapi.TYPE_STRING, nullable=True, description="Образование."),
+                        "experience": openapi.Schema(type=openapi.TYPE_STRING, nullable=True, description="Опыт работы."),
+                        "peculiarities_comm": openapi.Schema(type=openapi.TYPE_STRING, nullable=True, description="Особенности кондидата."),
+                        "interview_date": openapi.Schema(type=openapi.TYPE_STRING, format="date-time", nullable=True, description="Дата интервью."),
+                    },
+                ),
+                "vacancies": openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            "vacancy_id": openapi.Schema(
+                                type=openapi.TYPE_OBJECT,
+                                properties={
+                                    "vacancy_id": openapi.Schema(type=openapi.TYPE_INTEGER),
+                                    "vacancy_name": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                                    "description": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                                    "money_from": openapi.Schema(type=openapi.TYPE_INTEGER, nullable=False),
+                                    "money_to": openapi.Schema(type=openapi.TYPE_INTEGER, nullable=False),
+                                    "city": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                                    "name_company": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                                    "peculiarities": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                                    "url": openapi.Schema(type=openapi.TYPE_STRING),
+                                },
+                            ),
+                            "count": openapi.Schema(type=openapi.TYPE_INTEGER, description="Количество записей для данной вакансии ."),
+                        },
+                    ),
+                    description="Список вакансий, привязанных к заявке."
+                ),
+            },
+        ),
+    })
 @api_view(["POST"])
 @authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -191,7 +308,35 @@ def AddVacancyToDraft(request, vacancy_id):
     }
     return Response(response_data, status=status.HTTP_200_OK)
 
-@swagger_auto_schema(method='post', request_body=VacanciesSerializer)
+@swagger_auto_schema(
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            "image": openapi.Schema(
+                type=openapi.TYPE_STRING,
+                format="binary",
+                description="Новое изображение для вакансии."
+            )
+        },
+        required=["image"],
+    ),
+    responses={
+        status.HTTP_200_OK: VacanciesSerializer,
+        status.HTTP_400_BAD_REQUEST: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "Ошибка": openapi.Schema(type=openapi.TYPE_STRING, example="Изображение не предоставлено."),
+            },
+        ),
+        status.HTTP_404_NOT_FOUND: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "Ошибка": openapi.Schema(type=openapi.TYPE_STRING, example="Вакансия не найдена."),
+            },
+        ),
+    }
+)
 @api_view(["POST"])
 @authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAdmin])
@@ -220,6 +365,105 @@ def UpdateVacancyImage(request, vacancy_id):
 
 #ДОМЕН ЗАЯВКИ
 #GET список (кроме удаленных и черновика, поля модератора и создателя через логины) с фильтрацией по диапазону даты формирования и статусу
+@swagger_auto_schema(
+    method="get",
+    manual_parameters=[
+        openapi.Parameter(
+            "status",
+            openapi.IN_QUERY,
+            description="Статус заявки.",
+            type=openapi.TYPE_INTEGER,
+            required=False,
+        ),
+        openapi.Parameter(
+            "date_submitted_start",
+            openapi.IN_QUERY,
+            description="Начальная дата подачи заявки (в формате YYYY-MM-DDTHH:MM:SS).",
+            type=openapi.TYPE_STRING,
+            format="date-time",
+            required=False,
+        ),
+        openapi.Parameter(
+            "date_submitted_end",
+            openapi.IN_QUERY,
+            description="Конечная дата подачи заявки (в формате YYYY-MM-DDTHH:MM:SS).",
+            type=openapi.TYPE_STRING,
+            format="date-time",
+            required=False,
+        ),
+    ],
+    responses={
+        status.HTTP_200_OK: openapi.Schema(
+            type=openapi.TYPE_ARRAY,
+            items=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    "id_response": openapi.Schema(
+                    type=openapi.TYPE_INTEGER,
+                    description="Уникальный идентификатор заявки."
+                    ),
+                    "status": openapi.Schema(
+                        type=openapi.TYPE_INTEGER,
+                        description="Статус заявки: 1 - 'Черновик', 2 - 'Удалена', 3 - 'Сформирована', 4 - 'Завершена', 5 - 'Отклонена'.",
+                    ),
+                    "created_at": openapi.Schema(
+                        type=openapi.TYPE_STRING,
+                        format="date-time",
+                        description="Дата и время создания заявки.",
+                        nullable=False,
+                    ),
+                    "creator": openapi.Schema(
+                        type=openapi.TYPE_STRING,
+                        description="Имя пользователя, который создал заявку.",
+                        nullable=False,
+                    ),
+                    "moderator": openapi.Schema(
+                        type=openapi.TYPE_STRING,
+                        nullable=True,
+                        description="Имя модератора, обработавшего заявку (если есть)."
+                    ),
+                    "completed_at": openapi.Schema(
+                        type=openapi.TYPE_STRING,
+                        format="date-time",
+                        nullable=True,
+                        description="Дата и время завершения заявки (если была завершена)."
+                    ),
+                    "deleted_at": openapi.Schema(
+                        type=openapi.TYPE_STRING,
+                        format="date-time",
+                        nullable=True,
+                        description="Дата и время удаления заявки (если была удалена)."
+                    ),
+                    "name_human": openapi.Schema(
+                        type=openapi.TYPE_STRING,
+                        nullable=True,
+                        description="ФИО кандидата."
+                    ),
+                    "education": openapi.Schema(
+                        type=openapi.TYPE_STRING,
+                        nullable=True,
+                        description="Образование."
+                    ),
+                    "experience": openapi.Schema(
+                        type=openapi.TYPE_STRING,
+                        nullable=True,
+                        description="Опыт работы."
+                    ),
+                    "peculiarities_comm": openapi.Schema(
+                        type=openapi.TYPE_STRING,
+                        nullable=True,
+                        description="Особенности кандидата."
+                    ),
+                    "interview_date": openapi.Schema(
+                        type=openapi.TYPE_STRING,
+                        nullable=True,
+                        description="Дата интервью."
+                    ),
+                },
+            ),
+        )
+    },
+)
 @api_view(["GET"])
 @authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -249,6 +493,63 @@ def ResponsesList(request):
     return Response(serializer.data)
 
 # GET одна запись (поля заявки + ее услуги). При получении заявки возвращется список ее услуг с картинками
+@swagger_auto_schema(
+    method='get',
+    responses={
+        status.HTTP_200_OK: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "responses": openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "id_response": openapi.Schema(type=openapi.TYPE_INTEGER, description="Уникальный идентификатор заявки."),
+                        "status": openapi.Schema(type=openapi.TYPE_INTEGER, description="Статус заявки."),
+                        "created_at": openapi.Schema(type=openapi.TYPE_STRING, format="date-time", description="Дата и время создания заявки."),
+                        "creator": openapi.Schema(type=openapi.TYPE_STRING, description="Имя пользователя, создавшего заявку."),
+                        "moderator": openapi.Schema(type=openapi.TYPE_STRING, nullable=True, description="Имя модератора заявки (если есть)."),
+                        "completed_at": openapi.Schema(type=openapi.TYPE_STRING, format="date-time", nullable=True, description="Дата завершения заявки."),
+                        "deleted_at": openapi.Schema(type=openapi.TYPE_STRING, format="date-time", nullable=True, description="Дата удаления заявки."),
+                        "name_human": openapi.Schema(type=openapi.TYPE_STRING, nullable=True, description="ФИО кондидата."),
+                        "education": openapi.Schema(type=openapi.TYPE_STRING, nullable=True, description="Образование."),
+                        "experience": openapi.Schema(type=openapi.TYPE_STRING, nullable=True, description="Опыт работы."),
+                        "peculiarities_comm": openapi.Schema(type=openapi.TYPE_STRING, nullable=True, description="Особенности кондидата."),
+                        "interview_date": openapi.Schema(type=openapi.TYPE_STRING, format="date-time", nullable=True, description="Дата интервью."),
+                    },
+                ),
+                "vacancies": openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            "vacancy_id": openapi.Schema(
+                                type=openapi.TYPE_OBJECT,
+                                properties={
+                                    "vacancy_id": openapi.Schema(type=openapi.TYPE_INTEGER),
+                                    "vacancy_name": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                                    "description": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                                    "money_from": openapi.Schema(type=openapi.TYPE_INTEGER, nullable=False),
+                                    "money_to": openapi.Schema(type=openapi.TYPE_INTEGER, nullable=False),
+                                    "city": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                                    "name_company": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                                    "peculiarities": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                                    "url": openapi.Schema(type=openapi.TYPE_STRING),
+                                },
+                            ),
+                            "count": openapi.Schema(type=openapi.TYPE_INTEGER, description="Количество записей для данноq вакансии."),
+                        },
+                    ),
+                    description="Список вакансий, привязанных к заявке."
+                ),
+            },
+        ),
+        status.HTTP_404_NOT_FOUND: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "Ошибка": openapi.Schema(type=openapi.TYPE_STRING, description="Сообщение об ошибке.")
+            },
+        ),
+    }
+)
 @api_view(["GET"])
 @authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -275,7 +576,33 @@ def GetResponsesnById(request, id_response):
     return Response(response_data, status=status.HTTP_200_OK)
 
 # PUT изменения полей заявки по теме
-@swagger_auto_schema(method='put', request_body=ResponsesSerializer)
+@swagger_auto_schema(
+    method='put',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'name_human': openapi.Schema(type=openapi.TYPE_STRING, example="Якимова Татьяна Сергеевна"),
+            'education': openapi.Schema(type=openapi.TYPE_STRING, example="МГТУ им.Баумана, бакалавриат"),
+            'experience': openapi.Schema(type=openapi.TYPE_STRING, example="3 года опыта работы с Java"),
+            'peculiarities_comm': openapi.Schema(type=openapi.TYPE_STRING, example="Нарушение слуха"),
+        }
+    ),
+    responses={
+        status.HTTP_200_OK: ResponsesSerializer,
+        status.HTTP_400_BAD_REQUEST: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "Ошибка": openapi.Schema(type=openapi.TYPE_STRING, example="Нет данных для обновления или поля не разрешены."),
+            },
+        ),
+        status.HTTP_404_NOT_FOUND: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "Ошибка": openapi.Schema(type=openapi.TYPE_STRING, example="Заявка на создание вакансии не найдена."),
+            },
+        ),
+    }
+)
 @api_view(["PUT"])
 @authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -301,7 +628,30 @@ def UpdateResponses(request, id_response):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # PUT сформировать создателем (дата формирования). Происходит проверка на обязательные поля
-@swagger_auto_schema(method='put', request_body=ResponsesSerializer)
+@swagger_auto_schema(
+    method='put',
+    responses={
+        status.HTTP_200_OK: ResponsesSerializer,
+        status.HTTP_400_BAD_REQUEST: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "Ошибка": openapi.Schema(type=openapi.TYPE_STRING, example="Не заполнены данные об отклике."),
+            },
+        ),
+        status.HTTP_404_NOT_FOUND: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "Ошибка": openapi.Schema(type=openapi.TYPE_STRING, example="Заявка на создание отклика не найдена."),
+            },
+        ),
+        status.HTTP_405_METHOD_NOT_ALLOWED: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "Ошибка": openapi.Schema(type=openapi.TYPE_STRING, example="Заявку нельзя изменить, так как она не в статусе 'Черновик'."),
+            },
+        ),
+    }
+)
 @api_view(["PUT"])
 @authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -337,7 +687,41 @@ def UpdateStatusUser(request, id_response):
     serializer = ResponsesSerializer(response, many=False)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
-@swagger_auto_schema(method='put', request_body=ResponsesSerializer)
+@swagger_auto_schema(
+    method='put',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'status': openapi.Schema(
+                type=openapi.TYPE_INTEGER,
+                description="Новый статус заявки (4 - Завершена, 5 - Отклонена)",
+                example=4
+            ),
+        },
+        required=['status']
+    ),
+    responses={
+        status.HTTP_200_OK: ResponsesSerializer,
+        status.HTTP_400_BAD_REQUEST: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "Ошибка": openapi.Schema(type=openapi.TYPE_STRING, example="Неверные данные или обязательные поля не заполнены."),
+            },
+        ),
+        status.HTTP_404_NOT_FOUND: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "Ошибка": openapi.Schema(type=openapi.TYPE_STRING, example="Заявка на создание отклика не найдена."),
+            },
+        ),
+        status.HTTP_405_METHOD_NOT_ALLOWED: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "Ошибка": openapi.Schema(type=openapi.TYPE_STRING, example="Заявка ещё не сформирована или статус не разрешён."),
+            },
+        ),
+    }
+)
 @api_view(["PUT"])
 @authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsManager | IsAdmin])
@@ -418,7 +802,41 @@ def DeletVacancyFromonResponse(request, mm_id):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 # PUT изменение количества/порядка/значения в м-м (без PK м-м)
-@swagger_auto_schema(method='put', request_body=ResponsesVacanciesSerializer)
+@swagger_auto_schema(
+    method='put',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'count': openapi.Schema(
+                type=openapi.TYPE_INTEGER,
+                description="Количество откликов для данной вакансии в заявке.",
+                example=1
+            ),
+        },
+        required=['count']
+    ),
+    responses={
+        status.HTTP_200_OK: ResponsesVacanciesSerializer,
+        status.HTTP_400_BAD_REQUEST: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "Ошибка": openapi.Schema(type=openapi.TYPE_STRING, example="Количество не предоставлено"),
+            },
+        ),
+        status.HTTP_403_FORBIDDEN: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "detail": openapi.Schema(type=openapi.TYPE_STRING, example="You do not have permission to perform this action."),
+            },
+        ),
+        status.HTTP_404_NOT_FOUND: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "Ошибка": openapi.Schema(type=openapi.TYPE_STRING, example="Связь между вакансией откликом не найдена"),
+            },
+        ),
+    }
+)
 @api_view(["PUT"])
 @authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -513,7 +931,43 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 #@csrf_exempt
-@swagger_auto_schema(method='post', request_body=UserSerializer)
+@swagger_auto_schema(
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'username': openapi.Schema(type=openapi.TYPE_STRING, description="Имя пользователя"),
+            'password': openapi.Schema(type=openapi.TYPE_STRING, description="Пароль пользователя"),
+        },
+        required=['username', 'password']
+    ),
+    responses={
+        status.HTTP_200_OK: openapi.Response(
+            description="Успешная аутентификация",
+            schema=UserSerializer
+        ),
+        status.HTTP_400_BAD_REQUEST: openapi.Response(
+            description="Ошибка аутентификации, неверные данные",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    "success": openapi.Schema(type=openapi.TYPE_BOOLEAN, example=False),
+                    "error": openapi.Schema(type=openapi.TYPE_STRING, example="Неверное имя пользователя или пароль."),
+                },
+            ),
+        ),
+        status.HTTP_409_CONFLICT: openapi.Response(
+            description="Ошибка в данных пользователя",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    "success": openapi.Schema(type=openapi.TYPE_BOOLEAN, example=False),
+                    "error": openapi.Schema(type=openapi.TYPE_STRING, example="Ошибка в данных пользователя."),
+                },
+            ),
+        ),
+    }
+)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 @authentication_classes([])
@@ -521,23 +975,34 @@ def login_view(request):
     username = request.data.get('username')
     password = request.data.get('password')
     user = authenticate(request, username=username, password=password)
+
     if user is not None:
         random_key = str(uuid.uuid4())
         session_storage.set(random_key, username)
-        response = HttpResponse("{'status': 'ok'}")
-        response.set_cookie('session_id', random_key, httponly=True, samesite='Lax')
 
+        serializer = UserSerializer(user, data=request.data, many=False, partial=True)
+
+        if not serializer.is_valid():
+            return Response(
+                {"success": False, "error": "Ошибка в данных пользователя."},
+                status=status.HTTP_409_CONFLICT
+            )
+
+        user_data = serializer.data
+        response = Response(user_data, status=status.HTTP_200_OK)
+        response.set_cookie('session_id', random_key)
         return response
-        #login(request, user)
-        #return HttpResponse("{'status': 'ok'}")
     else:
-        return HttpResponse("{'status': 'error', 'error': 'login failed'}")
+        return Response(
+            {"success": False, "error": "Неверное имя пользователя или пароль."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
 
 #@csrf_exempt
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
-@authentication_classes([CsrfExemptSessionAuthentication])
+#@permission_classes([IsAuthenticated])
+#@authentication_classes([CsrfExemptSessionAuthentication])
 def logout_view(request):
 
     session_id = request.COOKIES.get('session_id')
@@ -551,7 +1016,7 @@ def logout_view(request):
         logout(request)
 
         request.user = AnonymousUser()
-
+        console.log(session_id)
         return response
     else:
         return Response({'status': 'Error', 'message': 'No active session'}, status=400)

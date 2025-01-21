@@ -23,21 +23,24 @@ class AuthBySessionIDIfExists(permissions.BasePermission):
             return user, None
         except (User.DoesNotExist, AttributeError, TypeError) as e:
             return None, None
+
+
 def get_user_from_session(request):
-
     session_id = request.COOKIES.get('session_id')
-
+    print(f"Session ID: {session_id}")  # Проверим, что session_id передается
     if session_id:
-        # Проверяем наличие session_id в Redis
         username = session_storage.get(session_id)
         if username:
-            username = username.decode('utf-8')  # Декодируем bytes в строку
+            username = username.decode('utf-8')
             try:
                 user = User.objects.get(username=username)
+                print(f"User found: {user.username}")
                 return user
             except User.DoesNotExist:
+                print("User not found in database")
                 return None
     return None
+
 
 
 class IsAuthenticated(permissions.BasePermission):
@@ -45,11 +48,12 @@ class IsAuthenticated(permissions.BasePermission):
         user = get_user_from_session(request)
         if user:
             request.user = user
+            print(f"Authenticated user: {user.username}")  # Лог для проверки
             return True
 
+        print("No user found, setting AnonymousUser")  # Лог для проверки
         request.user = AnonymousUser()
         return False
-
 
 class IsManager(permissions.BasePermission):
     def has_permission(self, request, view):
