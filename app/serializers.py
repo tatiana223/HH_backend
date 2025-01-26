@@ -32,10 +32,18 @@ class ResponsesSerializer(serializers.ModelSerializer):
 class ResponsesVacanciesSerializer(serializers.ModelSerializer):
     vacancy_id = Vacancies()
     quantity = serializers.IntegerField()
+    vacancy_name = serializers.CharField(source='vacancy.vacancy_name')
+    money_from = serializers.IntegerField(source='vacancy.money_from')
+    money_to = serializers.IntegerField(source='vacancy.money_to')
+    url = serializers.CharField(source='vacancy.url')
+    city = serializers.CharField(source='vacancy.city')
+    name_company = serializers.CharField(source='vacancy.name_company')
+    peculiarities = serializers.CharField(source='vacancy.peculiarities')
+
 
     class Meta:
         model = ResponsesVacancies
-        fields = ["vacancy", "request", "quantity"]
+        fields = ["vacancy_id", "vacancy_name", "money_from", "money_to", "url", "city", "name_company", "peculiarities", "request", "quantity"]
 
 
     def __init__(self, *args, **kwargs):

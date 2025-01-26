@@ -16,7 +16,7 @@ SECRET_KEY = 'django-insecure-jug1gtqrsut0pl-3)__4@*wybxdqibme=0p==sh6_h)njz)9ok
 DEBUG = True
 
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['localhost']
 
 
 # Application definition
@@ -148,11 +148,15 @@ AWS_SECRET_ACCESS_KEY = 'minio123'
 AWS_S3_ENDPOINT_URL = 'minio:9000'
 MINIO_USE_SSL = False
 
+DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+
 REDIS_HOST = 'redis'
 REDIS_PORT = 6379
-CORS_ALLOWED_ORIGINS = [ "http://localhost:3000", ]
+
+CORS_ALLOWED_ORIGINS = [ "https://localhost:5173", ]
 CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = [ "http://localhost:3000",]
-CORS_ORIGIN_WHITELIST = [ "http://localhost:3000",]
+CSRF_TRUSTED_ORIGINS = [ "https://localhost:5173",]
 SESSION_COOKIE_SAMESITE = 'None'
 SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = 'None'  # Тоже для CSRF cookies
+CSRF_COOKIE_SECURE = True

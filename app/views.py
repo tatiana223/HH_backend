@@ -261,7 +261,7 @@ def DeleteVacancy(request, vacancy_id):
         ),
     })
 @api_view(["POST"])
-@authentication_classes([CsrfExemptSessionAuthentication])
+#@authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def AddVacancyToDraft(request, vacancy_id):
     try:
@@ -307,7 +307,6 @@ def AddVacancyToDraft(request, vacancy_id):
         'vacancies': vacancies_serializer.data
     }
     return Response(response_data, status=status.HTTP_200_OK)
-
 @swagger_auto_schema(
     method='post',
     request_body=openapi.Schema(
@@ -468,6 +467,7 @@ def UpdateVacancyImage(request, vacancy_id):
 @authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def ResponsesList(request):
+
     status_filter = int(request.GET.get("status", 0))
     date_submitted_start = request.GET.get("formed_at")
     date_submitted_end = request.GET.get("deleted_at")
@@ -526,7 +526,6 @@ def ResponsesList(request):
                                 properties={
                                     "vacancy_id": openapi.Schema(type=openapi.TYPE_INTEGER),
                                     "vacancy_name": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
-                                    "description": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
                                     "money_from": openapi.Schema(type=openapi.TYPE_INTEGER, nullable=False),
                                     "money_to": openapi.Schema(type=openapi.TYPE_INTEGER, nullable=False),
                                     "city": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
@@ -554,6 +553,7 @@ def ResponsesList(request):
 @authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def GetResponsesnById(request, id_response):
+
     try:
         if request.user.is_staff or request.user.is_superuser:
             response = Responses.objects.get(id_response=id_response)
@@ -754,23 +754,22 @@ def UpdateStatusAdmin(request, id_response):
 
 # DELETE удаление (дата формирования)
 @api_view(["DELETE"])
-@authentication_classes([CsrfExemptSessionAuthentication])
-@permission_classes([IsManager | IsAdmin])
+#@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([AllowAny])
 def DeleteResponses(request, id_response):
     try:
         responses = Responses.objects.get(id_response=id_response)
     except Responses.DoesNotExist:
         return Response({"Ошибка": "Заявка на создание вакансии не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
-    '''if responses.status == 1:
-        return Response({"Ошибка": "Нельзя удалить заявку со статусом 'Черновик'"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-'''
+
     # Установите статус на "Удалена"
     responses.status = 2
-    responses.deleted_at = timezone.now()
     responses.save()
 
-    return Response(status=status.HTTP_204_NO_CONTENT)  # Возврат 204 при успешном удалении
+    serializer = ResponsesSerializer(responses, many=False)
+
+    return Response(serializer.data)
 
 # Домен м-м
 # DELETE удаление из заявки (без PK м-м)
@@ -968,6 +967,8 @@ class UserViewSet(viewsets.ModelViewSet):
         ),
     }
 )
+
+
 @api_view(["POST"])
 @permission_classes([AllowAny])
 @authentication_classes([])
@@ -990,7 +991,7 @@ def login_view(request):
 
         user_data = serializer.data
         response = Response(user_data, status=status.HTTP_200_OK)
-        response.set_cookie('session_id', random_key)
+        response.set_cookie('session_id', random_key,secure=True, samesite='none')
         return response
     else:
         return Response(
@@ -999,10 +1000,14 @@ def login_view(request):
         )
 
 
+
+def delete_cookie(self, key: str, path: str = "/", domain: str = None) -> None:
+     self.set_cookie(key, expires=0, max_age=0, path=path, domain=domain)
+
 #@csrf_exempt
 @api_view(['POST'])
-#@permission_classes([IsAuthenticated])
-#@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([IsAuthenticated])
+@authentication_classes([CsrfExemptSessionAuthentication])
 def logout_view(request):
 
     session_id = request.COOKIES.get('session_id')
@@ -1016,10 +1021,11 @@ def logout_view(request):
         logout(request)
 
         request.user = AnonymousUser()
-        console.log(session_id)
+
         return response
     else:
         return Response({'status': 'Error', 'message': 'No active session'}, status=400)
+
 
 
 # Connect to our Redis instance
