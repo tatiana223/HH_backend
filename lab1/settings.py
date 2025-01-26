@@ -152,11 +152,25 @@ DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 
 REDIS_HOST = 'redis'
 REDIS_PORT = 6379
-
+MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')
 CORS_ALLOWED_ORIGINS = [ "https://localhost:5173", ]
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = [ "https://localhost:5173",]
-SESSION_COOKIE_SAMESITE = 'None'
 SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SAMESITE = 'None'  # Тоже для CSRF cookies
 CSRF_COOKIE_SECURE = True
+
+CORS_ALLOW_HEADERS = [
+    "content-type",
+    "authorization",
+    "x-csrftoken",
+    "x-requested-with",
+]
+
+CORS_ALLOW_METHODS = [
+    "GET",
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE",
+    "OPTIONS",
+]

@@ -22,14 +22,26 @@ import uuid
 from rest_framework.authentication import SessionAuthentication
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+import pickle
 
-def GetDraftResponse(request):
-    if not request.user.is_authenticated:
-        return None
-    try:
-        return Responses.objects.filter(creator=request.user, status=1).first()
-    except Responses.DoesNotExist:
-        return None
+def get_user_from_session(request):
+    session_id = request.COOKIES.get('session_id')
+
+    if session_id:
+        # Проверяем наличие session_id в Redis
+        username = session_storage.get(session_id)
+        if username:
+            username = username.decode('utf-8')  # Декодируем bytes в строку
+            try:
+                user = User.objects.get(username=username)
+                return user
+            except User.DoesNotExist:
+                return None
+    return None
+
+def GetDraftResponse(user):
+    current_user = user
+    return Responses.objects.filter(creator=current_user.id, status=1).first()
 
 
 class CsrfExemptSessionAuthentication(SessionAuthentication):
@@ -84,27 +96,40 @@ class CsrfExemptSessionAuthentication(SessionAuthentication):
     },
 )
 @api_view(['GET'])
-@permission_classes([AllowAny])
-@authentication_classes([AuthBySessionIDIfExists])
 def VacanciesList(request):
-    vacancy_name = request.GET.get('vacancy_name', '')
+    def get_user_from_session(request):
+        session_id = request.COOKIES.get('session_id')
 
-    vacancies = Vacancies.objects.filter(status=True).filter(vacancy_name__istartswith=vacancy_name)
+        if session_id:
+            # Проверяем наличие session_id в Redis
+            username = session_storage.get(session_id)
+            if username:
+                username = username.decode('utf-8')  # Декодируем bytes в строку
+                try:
+                    user = User.objects.get(username=username)
+                    return user
+                except User.DoesNotExist:
+                    return None
+        return None
+
+    vacancy_name = request.GET.get('vacancy_name', '')
+    vacancies = Vacancies.objects.filter(status=True, vacancy_name__istartswith=vacancy_name)
 
     if not vacancies.exists():
         return JsonResponse({'error': 'No vacancies found'}, status=404)
+
     serializer = VacanciesSerializer(vacancies, many=True)
+
+    # Извлечение пользователя из сессии
+    user = get_user_from_session(request)
 
     draft_responses = None
     vacancies_to_response = None
-    if request.user and request.user.is_authenticated:
+
+    if user:
         try:
-            if request.user and request.user.is_authenticated:
-                draft_responses = Responses.objects.filter(status=1, creator=request.user).first()
-                vacancies_to_response = len(draft_responses.vacancies.all()) if draft_responses else None
-            else:
-                draft_responses = None
-                vacancies_to_response = None
+            draft_responses = Responses.objects.filter(status=1, creator=user).first()
+            vacancies_to_response = len(draft_responses.vacancies.all()) if draft_responses else None
         except Responses.DoesNotExist:
             draft_responses = None
 
@@ -114,6 +139,7 @@ def VacanciesList(request):
         'vacancies_to_response': vacancies_to_response,
     }
     return Response(response, status=status.HTTP_200_OK)
+
 
 @swagger_auto_schema(
     method='get',
@@ -195,8 +221,8 @@ def EditVacancy(request, vacancy_id):
     return Response(VacanciesSerializer(edited_vacancy).data, status=status.HTTP_200_OK)
 
 @api_view(["DELETE"])
-@authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAdmin])
+@authentication_classes([CsrfExemptSessionAuthentication])
 def DeleteVacancy(request, vacancy_id):
     try:
         vacancy = Vacancies.objects.get(vacancy_id=vacancy_id)
@@ -260,22 +286,29 @@ def DeleteVacancy(request, vacancy_id):
             },
         ),
     })
+
+
+
 @api_view(["POST"])
-#@authentication_classes([CsrfExemptSessionAuthentication])
-@permission_classes([IsAuthenticated])
 def AddVacancyToDraft(request, vacancy_id):
+    # Получаем пользователя из сессии
+    user = get_user_from_session(request)
+
+    if not user:
+        return Response({"error": "Пользователь не авторизован"}, status=status.HTTP_401_UNAUTHORIZED)
+
     try:
         vacancy = Vacancies.objects.get(vacancy_id=vacancy_id)
     except Vacancies.DoesNotExist:
         return Response({"error": "Вакансия не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
-    draft_response = GetDraftResponse(request)  # Получаем черновик заявки
+    draft_response = GetDraftResponse(user)  # Получаем черновик заявки
 
     # Если черновика нет, создаем новый
     if draft_response is None:
         draft_response = Responses.objects.create(
             created_at=timezone.now(),  # Дата создания
-            creator=request.user,  # Создатель заявки
+            creator=user,  # Создатель заявки
             status=1,  # Статус "Действует"
         )
 
@@ -295,7 +328,8 @@ def AddVacancyToDraft(request, vacancy_id):
                 quantity=1  # Начинаем с 1
             )
         except Exception as e:
-            return Response({"error": f"Ошибка при создании связки: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": f"Ошибка при создании связки: {str(e)}"},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     # Сериализация и возврат обновлённого черновика
     response_serializer = ResponsesSerializer(draft_response, many=False)
@@ -464,8 +498,8 @@ def UpdateVacancyImage(request, vacancy_id):
     },
 )
 @api_view(["GET"])
-@authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
+@authentication_classes([CsrfExemptSessionAuthentication])
 def ResponsesList(request):
 
     status_filter = int(request.GET.get("status", 0))
@@ -550,8 +584,8 @@ def ResponsesList(request):
     }
 )
 @api_view(["GET"])
-@authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
+@authentication_classes([CsrfExemptSessionAuthentication])
 def GetResponsesnById(request, id_response):
 
     try:
@@ -604,9 +638,13 @@ def GetResponsesnById(request, id_response):
     }
 )
 @api_view(["PUT"])
-@authentication_classes([CsrfExemptSessionAuthentication])
-@permission_classes([IsAuthenticated])
+#@authentication_classes([CsrfExemptSessionAuthentication])
+#@permission_classes([IsAuthenticated])
 def UpdateResponses(request, id_response):
+    user = get_user_from_session(request)
+
+    if not user:
+        return Response({"Ошибка": "Пользователь не авторизован"}, status=status.HTTP_401_UNAUTHORIZED)
     try:
         responses = Responses.objects.get(id_response=id_response)
     except Responses.DoesNotExist:
@@ -723,8 +761,8 @@ def UpdateStatusUser(request, id_response):
     }
 )
 @api_view(["PUT"])
-@authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsManager | IsAdmin])
+@authentication_classes([CsrfExemptSessionAuthentication])
 def UpdateStatusAdmin(request, id_response):
     try:
         responses = Responses.objects.get(id_response=id_response)
@@ -752,53 +790,69 @@ def UpdateStatusAdmin(request, id_response):
 
     return Response(serializer.data)
 
-# DELETE удаление (дата формирования)
+
+
 @api_view(["DELETE"])
-#@authentication_classes([CsrfExemptSessionAuthentication])
-@permission_classes([AllowAny])
 def DeleteResponses(request, id_response):
+    def get_user_from_session(request):
+        session_id = request.COOKIES.get('session_id')
+
+        if session_id:
+            # Проверяем наличие session_id в Redis
+            username = session_storage.get(session_id)
+            if username:
+                username = username.decode('utf-8')  # Декодируем bytes в строку
+                try:
+                    user = User.objects.get(username=username)
+                    return user
+                except User.DoesNotExist:
+                    return None
+        return None
+
+    # Извлекаем пользователя из сессии
+    user = get_user_from_session(request)
+
+    if not user:
+        return Response({"Ошибка": "Пользователь не авторизован"}, status=status.HTTP_401_UNAUTHORIZED)
+
     try:
         responses = Responses.objects.get(id_response=id_response)
     except Responses.DoesNotExist:
         return Response({"Ошибка": "Заявка на создание вакансии не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
+    # Проверяем, что пользователь является создателем заявки
+    if responses.creator != user:
+        return Response({"Ошибка": "Нет прав на удаление данной заявки"}, status=status.HTTP_403_FORBIDDEN)
 
-    # Установите статус на "Удалена"
+    # Устанавливаем статус на "Удалена"
     responses.status = 2
     responses.save()
 
     serializer = ResponsesSerializer(responses, many=False)
 
-    return Response(serializer.data)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 # Домен м-м
 # DELETE удаление из заявки (без PK м-м)
 @api_view(["DELETE"])
 @authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
-def DeletVacancyFromonResponse(request, mm_id):
+def DeleteVacancyFromonResponse(request, id_response, vacancy_id):
     try:
-        vacancy_response = ResponsesVacancies.objects.get(mm_id=mm_id)
+        vacancy_response = ResponsesVacancies.objects.get(request=id_response, vacancy=vacancy_id)
     except ResponsesVacancies.DoesNotExist:
-        return Response({"Ошибка": "Связь между городом и заявкой не найдена"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"Ошибка": "Связь между заявкой и вакансией не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
-    # Сохраняем ID заявки перед удалением связи
-    id_response = vacancy_response.request.id_response
+    response = Responses.objects.get(id_response=id_response)
 
-    # Удаляем связь
+    if not (request.user.is_staff or request.user.is_superuser):
+        if response.creator != request.user or response.status != 1:
+            return Response({"detail": "Вы не имеете права выполнять это действие."}, status=status.HTTP_403_FORBIDDEN)
+
     vacancy_response.delete()
 
-    # Обновляем данные заявки
-    try:
-        responses = Responses.objects.get(id_response=id_response)
-    except Responses.DoesNotExist:
-        return Response({"Ошибка": "Заявка на создание вакансии не найдена после удаления города"}, status=status.HTTP_404_NOT_FOUND)
-
-    # Сериализуем обновлённую отправку
-    serializer = ResponsesSerializer(responses, many=False)
-
-    # Возвращаем обновлённые данные отправки
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response({"detail": "Связь успешно удалена"}, status=status.HTTP_200_OK)
 
 # PUT изменение количества/порядка/значения в м-м (без PK м-м)
 @swagger_auto_schema(
@@ -1000,32 +1054,22 @@ def login_view(request):
         )
 
 
-
 def delete_cookie(self, key: str, path: str = "/", domain: str = None) -> None:
-     self.set_cookie(key, expires=0, max_age=0, path=path, domain=domain)
+    self.set_cookie(key, expires=0, max_age=0, path=path, domain=domain)
 
 #@csrf_exempt
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-@authentication_classes([CsrfExemptSessionAuthentication])
+@api_view(["POST"])
+#@permission_classes([AllowAny])
+#@authentication_classes([])
+
 def logout_view(request):
-
     session_id = request.COOKIES.get('session_id')
-
     if session_id:
         session_storage.delete(session_id)
-
-        response = Response({'status': 'Success'}, status=200)
-        response.delete_cookie('session_id')
-
-        logout(request)
-
-        request.user = AnonymousUser()
-
+        response = Response({"message": "Вы вышли из аккаунта."}, status=status.HTTP_200_OK)
+        response.delete_cookie("session_id")
         return response
-    else:
-        return Response({'status': 'Error', 'message': 'No active session'}, status=400)
-
+    return Response({"error": "Необходима аутентификация."}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 # Connect to our Redis instance
