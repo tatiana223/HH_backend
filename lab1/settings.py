@@ -158,7 +158,7 @@ CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = [ "https://localhost:5173",]
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
-
+SESSION_COOKIE_SAMESITE = 'None'
 CORS_ALLOW_HEADERS = [
     "content-type",
     "authorization",
@@ -174,3 +174,7 @@ CORS_ALLOW_METHODS = [
     "DELETE",
     "OPTIONS",
 ]
+# settings.py
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'  # Для Redis
+SESSION_COOKIE_AGE = 1209600  # Время жизни сессии (2 недели)
+SESSION_SAVE_EVERY_REQUEST = True  # Обновление сессии при каждом запросе

@@ -23,6 +23,8 @@ from rest_framework.authentication import SessionAuthentication
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 import pickle
+from django.utils.timezone import now
+from django.http import JsonResponse
 
 def get_user_from_session(request):
     session_id = request.COOKIES.get('session_id')
@@ -87,7 +89,7 @@ class CsrfExemptSessionAuthentication(SessionAuthentication):
                     type=openapi.TYPE_INTEGER,
                     nullable=True,
                 ),
-                "count": openapi.Schema(
+                "quantity": openapi.Schema(
                     type=openapi.TYPE_INTEGER,
                     nullable=True,
                 ),
@@ -113,7 +115,7 @@ def VacanciesList(request):
         return None
 
     vacancy_name = request.GET.get('vacancy_name', '')
-    vacancies = Vacancies.objects.filter(status=True, vacancy_name__istartswith=vacancy_name)
+    vacancies = Vacancies.objects.filter(status=1, vacancy_name__istartswith=vacancy_name)
 
     if not vacancies.exists():
         return JsonResponse({'error': 'No vacancies found'}, status=404)
@@ -124,20 +126,23 @@ def VacanciesList(request):
     user = get_user_from_session(request)
 
     draft_responses = None
-    vacancies_to_response = None
+    count = 0  # Устанавливаем начальное количество вакансий в черновике
 
     if user:
         try:
             draft_responses = Responses.objects.filter(status=1, creator=user).first()
-            vacancies_to_response = len(draft_responses.vacancies.all()) if draft_responses else None
+            if draft_responses:
+                # Считаем количество вакансий в отклике
+                count = draft_responses.vacancies.count()
         except Responses.DoesNotExist:
             draft_responses = None
 
     response = {
         'vacancies': serializer.data,
-        'draft_responses': draft_responses.pk if draft_responses else None,
-        'vacancies_to_response': vacancies_to_response,
+        'draft_responses': draft_responses.pk if draft_responses else None,  # Идентификатор черновика
+        'count': count,  # Количество вакансий в черновике отклика
     }
+
     return Response(response, status=status.HTTP_200_OK)
 
 
@@ -250,13 +255,14 @@ def DeleteVacancy(request, vacancy_id):
                         "created_at": openapi.Schema(type=openapi.TYPE_STRING, format="date-time", description="Дата и время создания заявки."),
                         "creator": openapi.Schema(type=openapi.TYPE_STRING, description="Имя пользователя, создавшего заявку."),
                         "moderator": openapi.Schema(type=openapi.TYPE_STRING, nullable=True, description="Имя модератора заявки (если есть)."),
-                        "completed_at": openapi.Schema(type=openapi.TYPE_STRING, format="date-time", nullable=True, description="Дата завершения заявки."),
+                        "submitted_at": openapi.Schema(type=openapi.TYPE_STRING, format="date-time", nullable=True, description="Дата сформирования заявки."),
+                        "interview_date": openapi.Schema(type=openapi.TYPE_STRING, format="date-time", nullable=True, description="Дата интервью."),
                         "deleted_at": openapi.Schema(type=openapi.TYPE_STRING, format="date-time", nullable=True, description="Дата удаления заявки."),
                         "name_human": openapi.Schema(type=openapi.TYPE_STRING, nullable=True, description="ФИО кондидата."),
                         "education": openapi.Schema(type=openapi.TYPE_STRING, nullable=True, description="Образование."),
                         "experience": openapi.Schema(type=openapi.TYPE_STRING, nullable=True, description="Опыт работы."),
                         "peculiarities_comm": openapi.Schema(type=openapi.TYPE_STRING, nullable=True, description="Особенности кондидата."),
-                        "interview_date": openapi.Schema(type=openapi.TYPE_STRING, format="date-time", nullable=True, description="Дата интервью."),
+
                     },
                 ),
                 "vacancies": openapi.Schema(
@@ -287,8 +293,6 @@ def DeleteVacancy(request, vacancy_id):
         ),
     })
 
-
-
 @api_view(["POST"])
 def AddVacancyToDraft(request, vacancy_id):
     # Получаем пользователя из сессии
@@ -316,31 +320,26 @@ def AddVacancyToDraft(request, vacancy_id):
     existing_entry = ResponsesVacancies.objects.filter(request=draft_response, vacancy=vacancy).first()
 
     if existing_entry:
-        # Увеличиваем количество, если вакансия уже есть в заявке
+        # Увеличиваем количество каждый раз, даже если вакансия уже есть в заявке
         existing_entry.quantity += 1
         existing_entry.save()
+        quantity = existing_entry.quantity
     else:
         # Если вакансии нет в черновике, создаем новую запись
         try:
-            ResponsesVacancies.objects.create(
+            new_entry = ResponsesVacancies.objects.create(
                 request=draft_response,
                 vacancy=vacancy,
                 quantity=1  # Начинаем с 1
             )
+            quantity = new_entry.quantity
         except Exception as e:
             return Response({"error": f"Ошибка при создании связки: {str(e)}"},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    # Сериализация и возврат обновлённого черновика
-    response_serializer = ResponsesSerializer(draft_response, many=False)
-    vacancies_responses = ResponsesVacancies.objects.filter(request=draft_response)
-    vacancies_serializer = ResponsesVacanciesSerializer(vacancies_responses, many=True, fields=["vacancy", "quantity"])
+    # Возвращаем успешный ответ
+    return Response({"message": "Вакансия добавлена в черновик", "quantity": quantity}, status=status.HTTP_200_OK)
 
-    response_data = {
-        'responses': response_serializer.data,
-        'vacancies': vacancies_serializer.data
-    }
-    return Response(response_data, status=status.HTTP_200_OK)
 @swagger_auto_schema(
     method='post',
     request_body=openapi.Schema(
@@ -455,6 +454,11 @@ def UpdateVacancyImage(request, vacancy_id):
                         nullable=True,
                         description="Имя модератора, обработавшего заявку (если есть)."
                     ),
+                    "interview_date": openapi.Schema(
+                        type=openapi.TYPE_STRING,
+                        nullable=True,
+                        description="Дата интервью."
+                    ),
                     "completed_at": openapi.Schema(
                         type=openapi.TYPE_STRING,
                         format="date-time",
@@ -487,32 +491,35 @@ def UpdateVacancyImage(request, vacancy_id):
                         nullable=True,
                         description="Особенности кандидата."
                     ),
-                    "interview_date": openapi.Schema(
-                        type=openapi.TYPE_STRING,
-                        nullable=True,
-                        description="Дата интервью."
-                    ),
+
                 },
             ),
         )
     },
 )
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
-@authentication_classes([CsrfExemptSessionAuthentication])
 def ResponsesList(request):
+    user = get_user_from_session(request)  # Получаем пользователя из сессии
+
+    if not user:  # Если пользователь не найден, возвращаем ошибку
+        return Response({"detail": "Authentication credentials were not provided."}, status=401)
+
+    # Используем GetDraftResponse для получения чернового отклика
+    draft_response = GetDraftResponse(user)
+    if draft_response:
+        print(f"Draft Response ID: {draft_response.id_response}")  # Пример использования
 
     status_filter = int(request.GET.get("status", 0))
-    date_submitted_start = request.GET.get("formed_at")
-    date_submitted_end = request.GET.get("deleted_at")
+    date_submitted_start = request.GET.get("date_submitted_start")
+    date_submitted_end = request.GET.get("date_submitted_end")
 
-    if request.user.is_staff or request.user.is_superuser:
+    if user.is_staff or user.is_superuser:
         response = Responses.objects.all()
     else:
         response = Responses.objects.exclude(status__in=[1, 2])
-        response = response.filter(creator=request.user)
+        response = response.filter(creator=user)
 
-    if status_filter :
+    if status_filter:
         response = response.filter(status=status_filter)
 
     if date_submitted_start and parse_datetime(date_submitted_start):
@@ -521,9 +528,7 @@ def ResponsesList(request):
     if date_submitted_end and parse_datetime(date_submitted_end):
         response = response.filter(submitted__lt=parse_datetime(date_submitted_end))
 
-
     serializer = ResponsesSerializer(response, many=True)
-
     return Response(serializer.data)
 
 # GET одна запись (поля заявки + ее услуги). При получении заявки возвращется список ее услуг с картинками
@@ -584,22 +589,23 @@ def ResponsesList(request):
     }
 )
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
-@authentication_classes([CsrfExemptSessionAuthentication])
 def GetResponsesnById(request, id_response):
+    user = get_user_from_session(request)  # Получаем пользователя из сессии
+
+    if not user:  # Если пользователь не найден
+        return Response({"Ошибка": "Пользователь не авторизован"}, status=status.HTTP_401_UNAUTHORIZED)
 
     try:
-        if request.user.is_staff or request.user.is_superuser:
+        if user.is_staff or user.is_superuser:  # Если пользователь администратор
             response = Responses.objects.get(id_response=id_response)
-        else:
-            response = Responses.objects.get(id_response=id_response, creator=request.user, status=1)
+        else:  # Если пользователь обычный
+            response = Responses.objects.get(id_response=id_response, creator=user, status=1)
     except Responses.DoesNotExist:
         return Response({"Ошибка": "Заявка на создание отклика не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
     responses_serializer = ResponsesSerializer(response)
 
-
-    vacancies_responses = ResponsesVacancies.objects.filter(request =response)
+    vacancies_responses = ResponsesVacancies.objects.filter(request=response)
     vacancies_serializer = ResponsesVacanciesSerializer(vacancies_responses, many=True)
 
     response_data = {
@@ -694,8 +700,6 @@ def UpdateResponses(request, id_response):
 @authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def UpdateStatusUser(request, id_response):
-    if request.method != 'PUT':
-        return Response({"error": "Метод не разрешён"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
     try:
         if request.user.is_staff or request.user.is_superuser:
@@ -761,9 +765,30 @@ def UpdateStatusUser(request, id_response):
     }
 )
 @api_view(["PUT"])
-@permission_classes([IsManager | IsAdmin])
-@authentication_classes([CsrfExemptSessionAuthentication])
 def UpdateStatusAdmin(request, id_response):
+    # Получаем пользователя из сессии
+    user = get_user_from_session(request)
+    if not user:
+        return JsonResponse({"Ошибка": "Вы не авторизованы"}, status=401)
+
+    # Проверяем, является ли пользователь суперпользователем
+    if not user.is_superuser:
+        return JsonResponse(
+            {"Ошибка": "У вас нет прав на выполнение этого действия"},
+            status=403
+        )
+
+    # Получаем отклик
+    try:
+        responses = Responses.objects.get(id_response=id_response)
+    except Responses.DoesNotExist:
+        return JsonResponse({"Ошибка": "Заявка на создание вакансии не найдена"}, status=404)
+
+    # Проверяем, является ли пользователь создателем отклика
+    if responses.creator == user:
+        return JsonResponse({"Ошибка": "Вы не можете изменить статус своей заявки"}, status=403)
+
+    # Проверяем корректность статуса
     try:
         responses = Responses.objects.get(id_response=id_response)
     except Responses.DoesNotExist:
@@ -789,7 +814,6 @@ def UpdateStatusAdmin(request, id_response):
     serializer = ResponsesSerializer(responses, many=False)
 
     return Response(serializer.data)
-
 
 
 @api_view(["DELETE"])
@@ -860,13 +884,13 @@ def DeleteVacancyFromonResponse(request, id_response, vacancy_id):
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
-            'count': openapi.Schema(
+            'quantity': openapi.Schema(
                 type=openapi.TYPE_INTEGER,
                 description="Количество откликов для данной вакансии в заявке.",
                 example=1
             ),
         },
-        required=['count']
+        required=['quantity']
     ),
     responses={
         status.HTTP_200_OK: ResponsesVacanciesSerializer,
@@ -893,11 +917,18 @@ def DeleteVacancyFromonResponse(request, id_response, vacancy_id):
 @api_view(["PUT"])
 @authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
-def UpdateResponsesVacancies(request, mm_id):
+def UpdateResponsesVacancies(request, id_response, vacancy_id):
     try:
-        vacancy_response = ResponsesVacancies.objects.get(mm_id=mm_id)
+        vacancy_response = ResponsesVacancies.objects.get(request=id_response, vacancy=vacancy_id)
     except ResponsesVacancies.DoesNotExist:
         return Response({"Ошибка": "Связь между вакансией и заявкой не найдена"}, status=status.HTTP_404_NOT_FOUND)
+
+    response = Responses.objects.get(id_response=id_response)
+
+    if request.user.is_staff == False or request.user.is_superuser == False:
+        if response.creator != request.user or response.status != 1:
+            return Response({"detail": "You do not have permission to perform this action."},
+                            status=status.HTTP_403_FORBIDDEN)
 
     quantity = request.data.get("quantity")  # Используем правильное имя поля
 
@@ -910,33 +941,50 @@ def UpdateResponsesVacancies(request, mm_id):
     return Response({"Ошибка": "Количество не предоставлено"}, status=status.HTTP_400_BAD_REQUEST)
 
 
-# PUT пользователя (личный кабинет)
-
 # Домен пользователь
 # PUT пользователя (личный кабинет)
 @swagger_auto_schema(method='put', request_body=UserSerializer)
 @api_view(["PUT"])
-@authentication_classes([CsrfExemptSessionAuthentication])
-@permission_classes([IsAuthenticated])
+#@authentication_classes([CsrfExemptSessionAuthentication])
+#@permission_classes([IsAuthenticated])
 def UpdateUser(request, user_id):
+    # Получаем текущего пользователя из сессии
+    current_user = get_user_from_session(request)
+    if not current_user:
+        return Response({"detail": "Пользователь не найден в сессии."}, status=status.HTTP_404_NOT_FOUND)
+
+    # Проверяем, существует ли пользователь с данным user_id
     if not User.objects.filter(id=user_id).exists():
         return Response({"detail": "Пользователь не найден."}, status=status.HTTP_404_NOT_FOUND)
 
     user = User.objects.get(id=user_id)
 
-    if not request.user.is_superuser:
-        if user != request.user:
-            return Response({"detail": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
+    # Проверяем права доступа
+    if not request.user.is_superuser and user != current_user:
+        return Response({"detail": "У вас нет прав для выполнения этого действия."}, status=status.HTTP_403_FORBIDDEN)
 
-    serializer = UserSerializer(user, data=request.data, many=False, partial=True)
+    # Проверяем черновик отклика
+    draft_response = GetDraftResponse(current_user)
+    if draft_response:
+        return Response({"detail": "Черновик отклика существует, обновление запрещено."}, status=status.HTTP_400_BAD_REQUEST)
 
+    data = request.data
+    if 'password' in data:
+        # Хэшируем пароль перед сохранением
+        user.set_password(data['password'])
+        data.pop('password', None)
+
+    # Создаем сериализатор с partial=True для частичного обновления
+    serializer = UserSerializer(user, data=data, partial=True)
+
+    # Проверяем валидность данных
     if not serializer.is_valid():
-        return Response(status=status.HTTP_409_CONFLICT)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    # Сохраняем обновленные данные
     serializer.save()
 
-    return Response(serializer.data)
-
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 class UserViewSet(viewsets.ModelViewSet):
     """Класс, описывающий методы работы с пользователями
@@ -946,24 +994,33 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     model_class = User
 
-    """def get_authenticators(self):
-        if self.action in ['create']:
-            authentication_classes = [AllowAny] # Отключаем аутентификацию
-        else:
-            authentication_classes = [CsrfExemptSessionAuthentication()]  # Используем
-        return [authenticate() for authenticate in authentication_classes]"""
-
     http_method_names = ['create', 'list', 'get', 'post', 'delete']
 
     def get_permissions(self):
         if self.action in ['create']:
-            permission_class = [AllowAny]
+            permission_classes = [AllowAny]
         elif self.action in ['list']:
-            permission_class = [IsManager | IsAdmin ]
+            permission_classes = [IsManager | IsAdmin]
         else:
-            permission_class = [IsAdmin]
-        return [permission() for permission in permission_class]
+            permission_classes = [IsAdmin]
+        return [permission() for permission in permission_classes]
 
+    @swagger_auto_schema(
+        operation_description="Регистрация нового пользователя (только username и password)",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'username': openapi.Schema(type=openapi.TYPE_STRING, description='Имя пользователя'),
+                'password': openapi.Schema(type=openapi.TYPE_STRING, description='Пароль пользователя', minLength=8),
+            },
+            required=['username', 'password']
+        ),
+        responses={
+            200: openapi.Response('Успешная регистрация'),
+            400: openapi.Response('Ошибка регистрации, например, если пользователь с таким username уже существует'),
+        }
+    )
+    @authentication_classes([CsrfExemptSessionAuthentication])
     def create(self, request):
         """
         Функция регистрации новых пользователей
@@ -980,6 +1037,7 @@ class UserViewSet(viewsets.ModelViewSet):
                                      is_staff=serializer.data['is_staff'])
             return Response({'status': 'Success'}, status=200)
         return Response({'status': 'Error', 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 
