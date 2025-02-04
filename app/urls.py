@@ -34,14 +34,14 @@ urlpatterns = [
 
     path('responses/', views.ResponsesList, name='responses_list'),
     path('responses/<int:id_response>/', views.GetResponsesnById, name='get_responses_by_id'),
-    path('responses/<int:id_response>/update_vacancy/', views.UpdateResponses, name='update_responses'),
+    path('responses/<int:id_response>/update_response/', views.UpdateResponses, name='update_responses'),
     path('responses/<int:id_response>/update_status_user/', views.UpdateStatusUser, name='update_status_user'),
     path('responses/<int:id_response>/update_status_admin/', views.UpdateStatusAdmin, name='update_status_admin'),
     path('responses/<int:id_response>/delete_response/', views.DeleteResponses, name='delete_response'),
 
-    path('vacancies_responses/<int:mm_id>/delete_vacancy_from_response/', views.DeletVacancyFromonResponse, name='delete_vacancy_from_response'),
-    path('vacancies_responses/<int:mm_id>/update_response/', views.UpdateResponsesVacancies, name='update_responses_vacancies'),
-    path('login/<int:user_id>/update_user/', views.UpdateUser, name='update_user'),
+    path('vacancies_responses/<int:id_response>/<int:vacancy_id>/delete_vacancy_from_response/', views.DeleteVacancyFromonResponse, name='delete_vacancy_from_response'),
+    path('vacancies_responses/<int:id_response>/<int:vacancy_id>/update_response/', views.UpdateResponsesVacancies, name='update_responses_vacancies'),
+    path('user/<int:user_id>/update_user/', views.UpdateUser, name='update_user'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),

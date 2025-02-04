@@ -40,6 +40,7 @@ class Responses(models.Model):
     creator = models.ForeignKey(django.contrib.auth.models.User, on_delete=models.CASCADE, related_name='created_responses')
     created_at = models.DateTimeField(auto_now_add=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     moderator = models.ForeignKey(django.contrib.auth.models.User, on_delete=models.SET_NULL, related_name='moderated_requests', null=True,
                                   blank=True)
@@ -50,6 +51,7 @@ class Responses(models.Model):
     vacancies = models.ManyToManyField('Vacancies', through='ResponsesVacancies', blank=True)  # Связь с вакансиями
     interview_date = models.DateTimeField(null=True, blank=True)  # Поле для даты собеседования
 
+    qr = models.TextField(null=True, blank=True)
     def save(self, *args, **kwargs):
         # Установить дату собеседования, если она не задана
         if not self.interview_date:
