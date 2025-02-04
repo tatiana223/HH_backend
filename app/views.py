@@ -25,6 +25,8 @@ from drf_yasg import openapi
 import pickle
 from django.utils.timezone import now
 from django.http import JsonResponse
+from app.services.qr_generate import generate_response_qr  # Если в utils.py
+
 
 def get_user_from_session(request):
     session_id = request.COOKIES.get('session_id')
@@ -42,9 +44,8 @@ def get_user_from_session(request):
     return None
 
 def GetDraftResponse(user):
-    current_user = user
-    return Responses.objects.filter(creator=current_user.id, status=1).first()
-
+    # Фильтруем отклики по пользователю и статусу, возвращаем первый результат
+    return Responses.objects.filter(creator=user.id, status=1).first()
 
 class CsrfExemptSessionAuthentication(SessionAuthentication):
     def enforce_csrf(self, request):
@@ -126,25 +127,24 @@ def VacanciesList(request):
     user = get_user_from_session(request)
 
     draft_responses = None
-    count = 0  # Устанавливаем начальное количество вакансий в черновике
+    quantity = 0  # Устанавливаем начальное количество вакансий в черновике
 
     if user:
         try:
             draft_responses = Responses.objects.filter(status=1, creator=user).first()
             if draft_responses:
                 # Считаем количество вакансий в отклике
-                count = draft_responses.vacancies.count()
+                quantity = draft_responses.vacancies.count()
         except Responses.DoesNotExist:
             draft_responses = None
 
     response = {
         'vacancies': serializer.data,
         'draft_responses': draft_responses.pk if draft_responses else None,  # Идентификатор черновика
-        'count': count,  # Количество вакансий в черновике отклика
+        'quantity': quantity,  # Количество вакансий в черновике отклика
     }
 
     return Response(response, status=status.HTTP_200_OK)
-
 
 @swagger_auto_schema(
     method='get',
@@ -323,22 +323,38 @@ def AddVacancyToDraft(request, vacancy_id):
         # Увеличиваем количество каждый раз, даже если вакансия уже есть в заявке
         existing_entry.quantity += 1
         existing_entry.save()
-        quantity = existing_entry.quantity
     else:
         # Если вакансии нет в черновике, создаем новую запись
         try:
             new_entry = ResponsesVacancies.objects.create(
                 request=draft_response,
-                vacancy=vacancy,
+                vacancy_id=vacancy_id,
                 quantity=1  # Начинаем с 1
             )
-            quantity = new_entry.quantity
+            # Обновляем количество вакансий в черновике
+            quantity = ResponsesVacancies.objects.filter(request=draft_response).count()
         except Exception as e:
             return Response({"error": f"Ошибка при создании связки: {str(e)}"},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    # Считываем количество вакансий в отклике после добавления новой вакансии
+    quantity = ResponsesVacancies.objects.filter(request=draft_response).count()
+
+    # Сериализация данных отклика
+    response_serializer = ResponsesSerializer(draft_response, many=False)
+
+    # Сериализация вакансий в отклике
+    vacancies_responses = ResponsesVacancies.objects.filter(request=draft_response)
+    vacancies_serializer = ResponsesVacanciesSerializer(vacancies_responses, many=True, fields=["vacancy_id", "quantity"])
+
+    response_data = {
+        'response': response_serializer.data,
+        'vacancies': vacancies_serializer.data,
+        'quantity': quantity  # Отправляем обновленное количество вакансий
+    }
+
     # Возвращаем успешный ответ
-    return Response({"message": "Вакансия добавлена в черновик", "quantity": quantity}, status=status.HTTP_200_OK)
+    return Response(response_data, status=status.HTTP_200_OK)
 
 @swagger_auto_schema(
     method='post',
@@ -513,6 +529,9 @@ def ResponsesList(request):
     date_submitted_start = request.GET.get("date_submitted_start")
     date_submitted_end = request.GET.get("date_submitted_end")
 
+    print(date_submitted_end)
+    print(date_submitted_start)
+
     if user.is_staff or user.is_superuser:
         response = Responses.objects.all()
     else:
@@ -523,10 +542,10 @@ def ResponsesList(request):
         response = response.filter(status=status_filter)
 
     if date_submitted_start and parse_datetime(date_submitted_start):
-        response = response.filter(submitted__gte=parse_datetime(date_submitted_start))
+        response = response.filter(created_at__gte=parse_datetime(date_submitted_start))
 
     if date_submitted_end and parse_datetime(date_submitted_end):
-        response = response.filter(submitted__lt=parse_datetime(date_submitted_end))
+        response = response.filter(created_at__lt=parse_datetime(date_submitted_end))
 
     serializer = ResponsesSerializer(response, many=True)
     return Response(serializer.data)
@@ -809,8 +828,17 @@ def UpdateStatusAdmin(request, id_response):
     responses.moderator = request.user
     responses.duration_days = (responses.completed_at - responses.created_at).days
 
-    responses.save()
+    #Qr-code
+    if responses.status == 4:
+        qr_code = generate_response_qr(responses)
+        if not qr_code:
+            print("Ошибка: QR-код не сгенерировался!")
+        responses.qr = qr_code
 
+        updated_data = request.data.copy()
+        updated_data["qr"] = qr_code
+
+    responses.save()
     serializer = ResponsesSerializer(responses, many=False)
 
     return Response(serializer.data)

@@ -51,6 +51,7 @@ class Responses(models.Model):
     vacancies = models.ManyToManyField('Vacancies', through='ResponsesVacancies', blank=True)  # Связь с вакансиями
     interview_date = models.DateTimeField(null=True, blank=True)  # Поле для даты собеседования
 
+    qr = models.TextField(null=True, blank=True)
     def save(self, *args, **kwargs):
         # Установить дату собеседования, если она не задана
         if not self.interview_date:

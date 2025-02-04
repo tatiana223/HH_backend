@@ -12,6 +12,7 @@ class VacanciesSerializer(serializers.ModelSerializer):
             'vacancy_id', 'vacancy_name', 'description', 'money_from', 'money_to',
             'url', 'city', 'name_company', 'peculiarities'
         ]
+
 class ResponsesSerializer(serializers.ModelSerializer):
     creator = serializers.CharField(source='creator.username', read_only=True)
     moderator = serializers.CharField(source='moderator.username', read_only=True)
